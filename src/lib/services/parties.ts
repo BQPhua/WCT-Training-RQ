@@ -43,3 +43,9 @@ export async function roleHolderCounts(tx: Tx): Promise<RoleHolderCounts> {
   const [lnd, hr] = await Promise.all([roleHolders(tx, "LND"), roleHolders(tx, "HR_HEAD")]);
   return { lnd: lnd.length, hrHead: hr.length };
 }
+
+/** Display names of the active HR Head(s), for trackers and hints. */
+export async function hrHeadNames(tx: Tx): Promise<string | null> {
+  const list = await roleHolders(tx, "HR_HEAD");
+  return list.length ? list.map((p) => p.name).join(", ") : null;
+}
