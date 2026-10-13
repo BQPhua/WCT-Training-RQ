@@ -214,3 +214,7 @@
     transition-duration: 1ms !important;
   }
 }
+
+/* Data-viz series (validated with dataviz/validate_palette.js, light & dark) */
+:root { --series-1: #2a78d6; --series-2: #d55181; --series-3: #7a5bd0; --grid: oklch(0.93 0.008 255); }
+.dark { --series-1: #3987e5; --series-2: #d55181; --series-3: #8f74e0; --grid: oklch(0.3 0.025 259); }
