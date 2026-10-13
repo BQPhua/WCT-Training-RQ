@@ -3,6 +3,8 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   // Served at https://hrforms.wct.my/WCT-Training-RQ/ behind Nginx.
   basePath: "/WCT-Training-RQ",
+  // Deploys build into a side directory and swap it in only when the build succeeds.
+  distDir: process.env.NEXT_DIST_DIR || ".next",
   // Every page here is per-user and authenticated; the classic dynamic
   // rendering model is simpler and safer than Cache Components' static shell.
   cacheComponents: false,

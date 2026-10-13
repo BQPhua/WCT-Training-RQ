@@ -11,7 +11,10 @@ type SP = Record<string, string | string[] | undefined>;
 function href(base: string, sp: SP, patch: Record<string, string | undefined>) {
   const p = new URLSearchParams();
   for (const [k, v] of Object.entries(sp)) if (typeof v === "string" && v) p.set(k, v);
-  for (const [k, v] of Object.entries(patch)) (v ? p.set(k, v) : p.delete(k));
+  for (const [k, v] of Object.entries(patch)) {
+    if (v) p.set(k, v);
+    else p.delete(k);
+  }
   const s = p.toString();
   return s ? `${base}?${s}` : base;
 }

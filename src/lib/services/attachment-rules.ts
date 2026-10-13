@@ -18,9 +18,7 @@ export function extensionOf(name: string): string {
 
 /** Basename only, no control chars or path separators, max 120 chars (keeps extension). */
 export function sanitizeFilename(name: string): string {
-  // eslint-disable-next-line no-control-regex
   let base = name.split(/[\\/]/).pop() ?? "";
-  // eslint-disable-next-line no-control-regex
   base = base.replace(/[\u0000-\u001f\u007f]/g, "").replace(/^\.+/, "").trim();
   if (!base) return "file";
   if (base.length > 120) {

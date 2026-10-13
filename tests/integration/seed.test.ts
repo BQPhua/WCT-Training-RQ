@@ -16,6 +16,11 @@ describe("seed", () => {
     expect(bus.find((b) => b.code === "ENC")?.name).toBe("E&C");
   });
 
+  it("production seed creates no departments (HR defines the real ones)", async () => {
+    await seed({ demo: false });
+    expect(await db.select().from(departments)).toHaveLength(0);
+  });
+
   it("is idempotent", async () => {
     await seed({ demo: true });
     const counts1 = [

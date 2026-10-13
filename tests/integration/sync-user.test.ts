@@ -9,7 +9,7 @@ import { resetDb } from "./setup";
 
 beforeEach(async () => {
   await resetDb();
-  await seed({ demo: false });
+  await seed({ demo: true });
 });
 
 describe("syncUserFromProfile", () => {

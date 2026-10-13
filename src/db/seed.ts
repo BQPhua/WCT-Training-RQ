@@ -55,7 +55,9 @@ export async function seed({ demo }: { demo: boolean }) {
   const buRows = await db.select().from(businessUnits);
   const buId = (code: string) => buRows.find((b) => b.code === code)!.id;
 
-  // Departments
+  if (!demo) return;
+
+  // Demo departments (production departments are created by HR in Admin settings)
   for (const d of SEED_DEPARTMENTS) {
     const existing = await db
       .select({ id: departments.id })
@@ -65,8 +67,6 @@ export async function seed({ demo }: { demo: boolean }) {
       await db.insert(departments).values({ name: d.name, businessUnitId: buId(d.bu) });
     }
   }
-
-  if (!demo) return;
 
   const deptRows = await db.select().from(departments);
   const deptId = (name: string) => deptRows.find((d) => d.name === name)!.id;

@@ -1,5 +1,6 @@
 import { relations, sql } from "drizzle-orm";
 import {
+  type AnyPgColumn,
   boolean,
   date,
   index,
@@ -63,7 +64,7 @@ export const departments = pgTable(
     businessUnitId: uuid("business_unit_id")
       .notNull()
       .references(() => businessUnits.id),
-    hodUserId: uuid("hod_user_id").references((): any => users.id, { onDelete: "set null" }),
+    hodUserId: uuid("hod_user_id").references((): AnyPgColumn => users.id, { onDelete: "set null" }),
     isActive: boolean("is_active").notNull().default(true),
     createdAt: createdAt(),
   },

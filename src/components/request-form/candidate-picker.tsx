@@ -47,10 +47,7 @@ export function CandidatePicker({
   const full = value.length >= MAX;
 
   React.useEffect(() => {
-    if (q.trim().length < 2) {
-      setResults([]);
-      return;
-    }
+    if (q.trim().length < 2) return;
     const ctrl = new AbortController();
     const t = setTimeout(async () => {
       setLoading(true);
@@ -75,6 +72,7 @@ export function CandidatePicker({
     };
   }, [q]);
 
+  const shown = q.trim().length >= 2 ? results : [];
   const already = (p: Person) => value.some((c) => c.email && c.email.toLowerCase() === p.email.toLowerCase());
 
   function add(p: Person) {
@@ -93,19 +91,19 @@ export function CandidatePicker({
   }
 
   function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (!open || !results.length) {
+    if (!open || !shown.length) {
       if (e.key === "Enter") e.preventDefault();
       return;
     }
     if (e.key === "ArrowDown") {
       e.preventDefault();
-      setActive((a) => Math.min(a + 1, results.length - 1));
+      setActive((a) => Math.min(a + 1, shown.length - 1));
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
       setActive((a) => Math.max(a - 1, 0));
     } else if (e.key === "Enter") {
       e.preventDefault();
-      add(results[active]);
+      add(shown[active]);
     } else if (e.key === "Escape") {
       setOpen(false);
     }
@@ -120,14 +118,14 @@ export function CandidatePicker({
           aria-expanded={open}
           aria-controls={listId}
           aria-autocomplete="list"
-          aria-activedescendant={open && results[active] ? `${listId}-${active}` : undefined}
+          aria-activedescendant={open && shown[active] ? `${listId}-${active}` : undefined}
           aria-label="Search staff by name or email"
           placeholder={full ? "Maximum of 8 candidates reached" : "Search staff by name or email…"}
           disabled={full}
           value={q}
           onChange={(e) => setQ(e.target.value)}
           onKeyDown={onKeyDown}
-          onFocus={() => results.length && setOpen(true)}
+          onFocus={() => shown.length > 0 && setOpen(true)}
           onBlur={() => setTimeout(() => setOpen(false), 150)}
           className="pl-9"
         />
@@ -135,7 +133,7 @@ export function CandidatePicker({
         {open && q.trim().length >= 2 && (
           <div className="absolute inset-x-0 top-full z-20 mt-1 overflow-hidden rounded-lg border border-line bg-surface shadow-md">
             <ul id={listId} role="listbox" className="max-h-72 overflow-y-auto py-1">
-              {results.map((p, i) => (
+              {shown.map((p, i) => (
                 <li
                   key={p.id}
                   id={`${listId}-${i}`}
@@ -163,7 +161,7 @@ export function CandidatePicker({
                   {already(p) && <span className="ml-auto text-xs text-muted">Added</span>}
                 </li>
               ))}
-              {!loading && results.length === 0 && <li className="px-3 py-2 text-sm text-muted">No staff found for “{q}”.</li>}
+              {!loading && shown.length === 0 && <li className="px-3 py-2 text-sm text-muted">No staff found for “{q}”.</li>}
             </ul>
             <button
               type="button"

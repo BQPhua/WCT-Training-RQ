@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: wct_trq
+          POSTGRES_PASSWORD: ci_password
+          POSTGRES_DB: wct_training_rq
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U wct_trq" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgres://wct_trq:ci_password@localhost:5432/wct_training_rq
+      SESSION_SECRET: ci-only-session-secret-0123456789abcdef0123456789
+      CRON_SECRET: ci-cron-secret
+      APP_URL: http://localhost:3010/WCT-Training-RQ
+      UPLOAD_DIR: ./.ci-uploads
+      BOOTSTRAP_ADMIN_EMAILS: admin@demo.wct.my
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - name: Unit tests
+        run: npm test
+      - name: Integration tests (PostgreSQL)
+        run: npm run test:integration
+      - name: Build
+        run: npm run build
+      - name: End-to-end tests
+        env:
+          AUTH_DEV_LOGIN: "true"
+          POWER_AUTOMATE_FLOW_URL: http://localhost:3010/WCT-Training-RQ/api/dev/flow-sink
+        run: |
+          npx playwright install --with-deps chromium
+          npm run db:migrate
+          SEED_DEMO=true npm run db:seed
+          npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: test-results/
+          retention-days: 7

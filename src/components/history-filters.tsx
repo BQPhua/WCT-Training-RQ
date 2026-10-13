@@ -14,7 +14,10 @@ export function HistoryFilters({ bus, departments, showOrg = true }: { bus: { id
 
   function update(patch: Record<string, string>) {
     const p = new URLSearchParams(sp.toString());
-    for (const [k, v] of Object.entries(patch)) (v ? p.set(k, v) : p.delete(k));
+    for (const [k, v] of Object.entries(patch)) {
+      if (v) p.set(k, v);
+      else p.delete(k);
+    }
     p.delete("page");
     router.replace(`${pathname}?${p.toString()}`, { scroll: false });
   }
