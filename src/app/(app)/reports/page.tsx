@@ -63,7 +63,7 @@ export default async function ReportsPage({ searchParams }: PageProps<"/reports"
           <EmptyState title={`No submitted requests in ${year}`}>Reports fill in as requests are submitted and approved.</EmptyState>
         </Panel>
       ) : (
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 [&>*]:min-w-0">
           <Panel>
             <PanelHeader title="Requests submitted per month" />
             <PanelBody>

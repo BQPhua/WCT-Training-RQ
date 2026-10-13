@@ -47,3 +47,5 @@ uploads/
 /test-results/
 /playwright-report/
 !.env.example
+.impeccable/review/
+.impeccable/questions/

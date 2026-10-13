@@ -37,7 +37,23 @@ export function RequestsTable({ rows, total, f, base, sp, emptyTitle, emptyText 
   if (!rows.length) return <EmptyState icon={<SearchX />} title={emptyTitle}>{emptyText}</EmptyState>;
   return (
     <div>
-      <div className="overflow-x-auto">
+      <ul className="divide-y divide-line sm:hidden">
+        {rows.map((r) => (
+          <li key={r.id}>
+            <Link href={`/requests/${r.id}`} className="block px-4 py-3.5 active:bg-surface-2">
+              <span className="flex items-center justify-between gap-3">
+                <span className="text-xs font-semibold tabular text-muted">{r.refNo ?? "Draft"}</span>
+                <StatusBadge status={r.status} />
+              </span>
+              <span className="mt-1 block font-medium text-ink">{r.title}</span>
+              <span className="mt-0.5 block text-[13px] text-muted">
+                {r.requesterName} · {formatDateRange(r.startDate, r.endDate)} · {formatMYR(r.totalFees)}
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+      <div className="hidden overflow-x-auto sm:block">
         <table className="w-full min-w-[860px] text-sm">
           <thead className="border-b border-line bg-surface-2 text-xs text-muted">
             <tr>
@@ -53,7 +69,7 @@ export function RequestsTable({ rows, total, f, base, sp, emptyTitle, emptyText 
           <tbody className="divide-y divide-line">
             {rows.map((r) => (
               <tr key={r.id} className="group relative hover:bg-surface-2">
-                <td className="px-4 py-3 font-semibold tabular text-ink-2">
+                <td className="whitespace-nowrap px-4 py-3 font-semibold tabular text-ink-2">
                   <Link href={`/requests/${r.id}`} className="after:absolute after:inset-0 focus-visible:outline-none focus-visible:after:outline focus-visible:after:outline-2 focus-visible:after:outline-focus">
                     {r.refNo ?? "Draft"}
                   </Link>

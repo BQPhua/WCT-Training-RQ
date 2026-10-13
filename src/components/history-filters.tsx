@@ -35,7 +35,7 @@ export function HistoryFilters({ bus, departments, showOrg = true }: { bus: { id
   const active = ["status", "buId", "departmentId", "type", "from", "to", "hrdc", "q"].some((k) => sp.get(k));
 
   return (
-    <div className="grid gap-3 border-b border-line px-4 py-4 sm:grid-cols-2 lg:grid-cols-[minmax(14rem,1.6fr)_repeat(3,minmax(0,1fr))]">
+    <div className="grid grid-cols-1 gap-3 border-b border-line px-4 py-4 [&>*]:min-w-0 sm:grid-cols-2 lg:grid-cols-[minmax(14rem,1.6fr)_repeat(3,minmax(0,1fr))]">
       <div className="relative sm:col-span-2 lg:col-span-1">
         <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
         <Input aria-label="Search" placeholder="Ref no., title, requester, candidate, provider…" value={q} onChange={(e) => setQ(e.target.value)} className="pl-9" />
@@ -79,7 +79,7 @@ export function HistoryFilters({ bus, departments, showOrg = true }: { bus: { id
         <option value="yes">HRD Corp claimable</option>
         <option value="no">Not claimable</option>
       </NativeSelect>
-      <div className="flex items-center gap-2">
+      <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
         <Input type="date" aria-label="Training from" value={sp.get("from") ?? ""} onChange={(e) => update({ from: e.target.value })} />
         <span className="text-muted">–</span>
         <Input type="date" aria-label="Training to" value={sp.get("to") ?? ""} onChange={(e) => update({ to: e.target.value })} />

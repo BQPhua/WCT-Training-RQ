@@ -61,11 +61,15 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
         </Button>
       </div>
 
-      <Panel className="grid grid-cols-2 divide-line overflow-hidden lg:grid-cols-4 lg:divide-x [&>*:nth-child(-n+2)]:border-b [&>*:nth-child(-n+2)]:border-line lg:[&>*:nth-child(-n+2)]:border-b-0 [&>*:nth-child(odd)]:border-r [&>*:nth-child(odd)]:border-line lg:[&>*:nth-child(odd)]:border-r-0">
+      <Panel className="grid grid-cols-2 overflow-hidden lg:grid-cols-4">
         {placards.map((p) => (
-          <Link key={p.label} href={p.href} className="group px-5 py-4 transition-colors hover:bg-surface-2">
+          <Link
+            key={p.label}
+            href={p.href}
+            className="group border-line px-4 py-4 transition-colors hover:bg-surface-2 sm:px-5 [&:nth-child(even)]:border-l [&:nth-child(n+3)]:border-t lg:[&:nth-child(n+2)]:border-l lg:[&:nth-child(n+3)]:border-t-0"
+          >
             <span className="block text-[12px] font-medium text-muted">{p.label}</span>
-            <span className={`mt-1 flex items-baseline gap-2 text-2xl font-semibold tabular tracking-tight ${p.strong ? "text-brand-text" : "text-ink"}`}>
+            <span className={`mt-1 flex items-baseline gap-2 whitespace-nowrap text-xl font-semibold tabular tracking-tight sm:text-2xl ${p.strong ? "text-brand-text" : "text-ink"}`}>
               {p.value}
               <ArrowRight className="size-4 -translate-x-1 text-muted opacity-0 transition-all group-hover:translate-x-0 group-hover:opacity-100" />
             </span>
@@ -73,7 +77,7 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
         ))}
       </Panel>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_380px] xl:items-start [&>*]:min-w-0">
         <Panel>
           <PanelHeader
             title={`Availability board · ${year}`}

@@ -163,7 +163,7 @@ export function RequestForm(props: RequestFormProps) {
         e.preventDefault();
         openReview();
       }}
-      className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_300px]"
+      className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_300px] [&>*]:min-w-0"
     >
       <div className="min-w-0 space-y-5">
         <Section n={1} title="General details">

@@ -99,7 +99,7 @@ export default async function RequestDetailPage({ params, searchParams }: PagePr
 
       <ActionPanel requestId={r.id} version={r.version} actions={actions} stageLabel={stage ? STAGE_LABEL[stage] : ""} buName={d.businessUnit?.name ?? null} />
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_380px] [&>*]:min-w-0">
         <div className="min-w-0 space-y-6">
           <Panel>
             <PanelHeader title="Training program" />
@@ -111,7 +111,7 @@ export default async function RequestDetailPage({ params, searchParams }: PagePr
                 <Fact icon={Presentation} label="Conducted by">{r.conductedBy ?? "—"}</Fact>
                 <Fact icon={Wallet} label="Fees">
                   {formatMYR(total)}
-                  <span className="ml-1.5 text-xs font-normal text-muted">
+                  <span className="block text-xs font-normal text-muted">
                     ({d.candidates.length} × {formatMYR(r.feePerPax)})
                   </span>
                 </Fact>
