@@ -23,9 +23,10 @@ export const candidateSchema = z.object({
   staffNo: optionalTrimmed(30),
   userId: z.uuid().optional().nullable().transform((v) => v ?? undefined),
 });
-export type CandidateInput = z.infer<typeof candidateSchema>;
+export type CandidateInput = z.input<typeof candidateSchema>;
+export type CandidateData = z.output<typeof candidateSchema>;
 
-function noDuplicateCandidates(list: CandidateInput[], ctx: z.RefinementCtx) {
+function noDuplicateCandidates(list: CandidateData[], ctx: z.RefinementCtx) {
   const seen = new Set<string>();
   list.forEach((c, i) => {
     const key = c.email ? `e:${c.email.toLowerCase()}` : `n:${c.name.trim().toLowerCase()}`;
@@ -65,7 +66,7 @@ export const requestFormSchema = z
       ctx.addIssue({ code: "custom", message: "End time must be after start time", path: ["endTime"] });
     }
   });
-export type RequestFormInput = z.infer<typeof requestFormSchema>;
+export type RequestFormInput = z.input<typeof requestFormSchema>;
 
 /** Drafts: only the title is mandatory; anything provided must still be well-formed. */
 export const draftSchema = z.object({
@@ -81,7 +82,8 @@ export const draftSchema = z.object({
   conductedBy: optionalTrimmed(200),
   candidates: candidatesList(0),
 });
-export type DraftInput = z.infer<typeof draftSchema>;
+export type DraftInput = z.input<typeof draftSchema>;
+export type DraftData = z.output<typeof draftSchema>;
 
 export const actionSchema = z.object({
   requestId: z.uuid(),
@@ -98,7 +100,7 @@ export const lndFieldsSchema = z.object({
   hrdcGrantNo: z.string().trim().max(50).optional().nullable(),
   lndRemarks: z.string().trim().max(1000).optional().nullable(),
 });
-export type LndFieldsInput = z.infer<typeof lndFieldsSchema>;
+export type LndFieldsInput = z.input<typeof lndFieldsSchema>;
 
 export const commentSchema = z.object({
   body: z.string().trim().min(1, "Comment cannot be empty").max(2000),
