@@ -79,7 +79,7 @@ export function HistoryFilters({ bus, departments, showOrg = true }: { bus: { id
         <option value="yes">HRD Corp claimable</option>
         <option value="no">Not claimable</option>
       </NativeSelect>
-      <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
+      <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 lg:col-span-2">
         <Input type="date" aria-label="Training from" value={sp.get("from") ?? ""} onChange={(e) => update({ from: e.target.value })} />
         <span className="text-muted">–</span>
         <Input type="date" aria-label="Training to" value={sp.get("to") ?? ""} onChange={(e) => update({ to: e.target.value })} />

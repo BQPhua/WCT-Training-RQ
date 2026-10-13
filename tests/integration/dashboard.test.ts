@@ -42,6 +42,8 @@ describe("getDashboard", () => {
       await performAction(await asUser(email), { requestId: id, version: v, type: "APPROVE" });
     }
     const d = await getDashboard(await asUser("hrhead@demo.wct.my"));
+    expect(d.upcoming.map((u) => u.id)).toEqual([id]);
+    expect(d.upcoming[0].candidateCount).toBe(2);
     expect(d.approvedThisYear).toBe(1);
     expect(d.feesThisYear).toBe("2501.00"); // 1250.50 × 2 candidates
   });

@@ -8,14 +8,17 @@ import { awaitingActionWhere, visibleRequestsWhere } from "./queries";
 
 const OPEN = ["DRAFT", "PENDING_HOD", "PENDING_LND", "PENDING_HR", "RETURNED"] as const;
 
-export const candidateCountSql = sql<number>`(select count(*) from candidates c where c.request_id = ${tr.id})`;
+// Always table-qualified: Drizzle omits the qualifier on single-table selects, and an
+// unqualified "id" inside this subquery would resolve to candidates.id.
+export const candidateCountSql = sql<number>`(select count(*) from candidates c where c.request_id = ${sql.raw('"training_requests"."id"')})`;
 
 export async function getDashboard(user: CurrentUser) {
   const yearStart = startOfYearMY(yearInMY());
   const visible = visibleRequestsWhere(user);
   const awaiting = await awaitingActionWhere(user);
 
-  const [[myOpen], [awaitingMe], [approved], board, awaitingList, recentActivity, awaitingIds] = await Promise.all([
+  const todayMY = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kuala_Lumpur" }).format(new Date());
+  const [[myOpen], [awaitingMe], [approved], board, awaitingList, recentActivity, awaitingIds, upcoming] = await Promise.all([
     db.select({ n: count() }).from(tr).where(and(eq(tr.requesterId, user.id), inArray(tr.status, [...OPEN]))),
     db.select({ n: count() }).from(tr).where(awaiting),
     db
@@ -76,6 +79,12 @@ export async function getDashboard(user: CurrentUser) {
       .orderBy(desc(requestActions.createdAt))
       .limit(8),
     db.select({ id: tr.id }).from(tr).where(awaiting).limit(300),
+    db
+      .select({ id: tr.id, refNo: tr.refNo, title: tr.title, startDate: tr.startDate, endDate: tr.endDate, venue: tr.venue, candidateCount: candidateCountSql.mapWith(Number) })
+      .from(tr)
+      .where(and(visible, eq(tr.status, "APPROVED"), gte(tr.startDate, todayMY)))
+      .orderBy(tr.startDate)
+      .limit(5),
   ]);
 
   return {
@@ -87,6 +96,7 @@ export async function getDashboard(user: CurrentUser) {
     awaitingList,
     recentActivity,
     awaitingIds: awaitingIds.map((r) => r.id),
+    upcoming,
   };
 }
 

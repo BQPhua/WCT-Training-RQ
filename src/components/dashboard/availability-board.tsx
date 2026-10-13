@@ -120,6 +120,10 @@ export function AvailabilityBoard({ items, awaitingIds }: { items: BoardItem[]; 
                 );
               })}
             </ol>
+            <span className="hidden w-24 shrink-0 self-center text-right text-xs leading-tight tabular text-muted sm:block">
+              {row.items.length} request{row.items.length === 1 ? "" : "s"}
+              <span className="block text-approved-text">{row.items.filter((i) => i.status === "APPROVED").length} approved</span>
+            </span>
           </div>
         ))}
       </div>
