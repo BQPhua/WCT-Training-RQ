@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { businessUnits, departments, trainingRequests as tr } from "@/db/schema";
 import type { CurrentUser } from "@/lib/auth/load-user";
 import { STATUSES, type Status } from "@/lib/workflow";
+import { startOfYearMY } from "@/lib/format";
 import { candidateCountSql } from "./dashboard";
 import { ServiceError } from "./errors";
 
@@ -24,8 +25,8 @@ export async function getReports(user: CurrentUser, { year }: { year: number }) 
   if (!canSeeReports(user)) throw new ReportsForbiddenError();
   const fullScope = user.actor.roles.length > 0;
   const scope: SQL = fullScope ? sql`true` : inArray(tr.businessUnitId, user.actor.buAdminBusinessUnitIds);
-  const start = new Date(year, 0, 1);
-  const end = new Date(year + 1, 0, 1);
+  const start = startOfYearMY(year);
+  const end = startOfYearMY(year + 1);
   const submittedInYear = and(scope, gte(tr.submittedAt, start), lt(tr.submittedAt, end))!;
   const approvedInYear = and(scope, eq(tr.status, "APPROVED"), gte(tr.finalisedAt, start), lt(tr.finalisedAt, end))!;
   const monthOf = (col: typeof tr.submittedAt | typeof tr.finalisedAt) => sql<number>`extract(month from ${col} at time zone 'Asia/Kuala_Lumpur')::int`;

@@ -7,6 +7,7 @@ import { EmptyState } from "@/components/ui/misc";
 import { Panel, PanelBody, PanelHeader } from "@/components/ui/panel";
 import { requireUser } from "@/lib/auth/current-user";
 import { formatDateMY, formatDateTimeMY, formatMYR, TIMEZONE } from "@/lib/format";
+import { yearInMY } from "@/lib/format";
 import { getDashboard } from "@/lib/services/dashboard";
 import { STAGE_LABEL, type Stage } from "@/lib/workflow";
 
@@ -30,7 +31,7 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
   const user = await requireUser();
   const d = await getDashboard(user);
   const sp = await searchParams;
-  const year = new Date().getFullYear();
+  const year = yearInMY();
   const today = new Intl.DateTimeFormat("en-GB", { timeZone: TIMEZONE, weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(new Date());
 
   const placards = [

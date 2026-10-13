@@ -41,3 +41,15 @@ describe("formatDateTimeMY", () => {
     expect(formatDateTimeMY(new Date("2026-10-13T01:05:00Z"))).toBe("13/10/2026, 9:05 AM");
   });
 });
+
+import { startOfYearMY, yearInMY } from "@/lib/format";
+
+describe("Malaysia year boundaries", () => {
+  it("1 Jan 01:00 MYT belongs to the new year even on a UTC server", () => {
+    expect(yearInMY(new Date("2025-12-31T17:00:00Z"))).toBe(2026);
+    expect(yearInMY(new Date("2025-12-31T15:59:00Z"))).toBe(2025);
+  });
+  it("year start is midnight in Kuala Lumpur", () => {
+    expect(startOfYearMY(2026).toISOString()).toBe("2025-12-31T16:00:00.000Z");
+  });
+});

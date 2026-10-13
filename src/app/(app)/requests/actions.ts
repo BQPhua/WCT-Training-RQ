@@ -1,10 +1,8 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { eq } from "drizzle-orm";
-import { db } from "@/db";
-import { departments, users } from "@/db/schema";
 import { requireApiUser } from "@/lib/auth/current-user";
+import { setOwnDepartment } from "@/lib/services/profile";
 import { toActionError, type ActionResult } from "@/lib/action-result";
 import {
   addComment,
@@ -54,10 +52,7 @@ export async function submitRequestAction(input: SaveInput & { resubmit: boolean
 
 export async function setMyDepartmentAction(departmentId: string): Promise<ActionResult> {
   try {
-    const user = await requireApiUser();
-    const [d] = await db.select({ id: departments.id }).from(departments).where(eq(departments.id, departmentId));
-    if (!d) return { ok: false, error: "Department not found." };
-    await db.update(users).set({ departmentId: d.id }).where(eq(users.id, user.id));
+    await setOwnDepartment(await requireApiUser(), departmentId);
     revalidatePath("/", "layout");
     return { ok: true };
   } catch (e) {

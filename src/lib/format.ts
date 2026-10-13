@@ -61,3 +61,13 @@ export function formatDateRange(start: string | null, end: string | null): strin
   if (!end || end === start) return formatDateMY(start);
   return `${formatDateMY(start)} – ${formatDateMY(end)}`;
 }
+
+/** Calendar year in Malaysia (UTC+8, no DST), independent of the server's TZ. */
+export function yearInMY(d: Date = new Date()): number {
+  return Number(new Intl.DateTimeFormat("en-GB", { timeZone: TIMEZONE, year: "numeric" }).format(d));
+}
+
+/** 00:00 on 1 January in Kuala Lumpur, as an absolute instant. */
+export function startOfYearMY(year: number): Date {
+  return new Date(Date.UTC(year, 0, 1) - 8 * 60 * 60 * 1000);
+}

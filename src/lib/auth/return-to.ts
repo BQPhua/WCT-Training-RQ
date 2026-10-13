@@ -7,3 +7,9 @@ export function safeReturnTo(value: string | null | undefined): string {
   if (path === BASE_PATH || path.startsWith(`${BASE_PATH}/`)) path = path.slice(BASE_PATH.length) || "/dashboard";
   return path;
 }
+
+/** Sign-in URL that returns the user to `path` afterwards (e.g. from an email link). */
+export function signinPath(path: string | null | undefined): string {
+  const target = safeReturnTo(path);
+  return target === "/dashboard" ? "/signin" : `/signin?returnTo=${encodeURIComponent(target)}`;
+}

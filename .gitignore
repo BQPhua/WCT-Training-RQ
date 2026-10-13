@@ -49,3 +49,7 @@ uploads/
 !.env.example
 .impeccable/review/
 .impeccable/questions/
+.next-build/
+.next-prev/
+.next-failed/
+.next-prod/

@@ -9,6 +9,7 @@ import { Panel, PanelBody, PanelHeader } from "@/components/ui/panel";
 import { requireUser } from "@/lib/auth/current-user";
 import { BASE_PATH } from "@/lib/env";
 import { formatMYR } from "@/lib/format";
+import { yearInMY } from "@/lib/format";
 import { canSeeReports, getReports } from "@/lib/services/reports";
 import { STAGE_LABEL, STATUSES } from "@/lib/workflow";
 
@@ -21,7 +22,7 @@ export default async function ReportsPage({ searchParams }: PageProps<"/reports"
   const user = await requireUser();
   if (!canSeeReports(user)) redirect("/dashboard?denied=1");
   const sp = await searchParams;
-  const now = new Date().getFullYear();
+  const now = yearInMY();
   const y = Number(sp.year);
   const year = Number.isInteger(y) && y >= 2020 && y <= now + 1 ? y : now;
   const r = await getReports(user, { year });

@@ -2,7 +2,7 @@ name: Deploy
 
 # Runs after CI succeeds on main (or manually). Secrets live in
 # GitHub → Settings → Secrets and variables → Actions:
-#   DEPLOY_HOST, DEPLOY_PORT, DEPLOY_USER, DEPLOY_SSH_KEY
+#   DEPLOY_HOST, DEPLOY_PORT, DEPLOY_USER, DEPLOY_SSH_KEY, DEPLOY_HOST_FINGERPRINT
 on:
   workflow_run:
     workflows: [CI]
@@ -19,17 +19,34 @@ concurrency:
 
 jobs:
   deploy:
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    # Only deploy commits that passed CI from a push to this repository's main
+    # (never from a fork's pull request, even one whose branch is named main).
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_repository.full_name == github.repository)
     runs-on: ubuntu-latest
     environment: production
     timeout-minutes: 20
     steps:
       - name: Deploy over SSH
-        uses: appleboy/ssh-action@v1.2.0
+        # Pinned to the v1.2.0 commit: this step receives the production SSH key.
+        uses: appleboy/ssh-action@7eaf76671a0d7eec5d98ee897acda4f968735a17
+        env:
+          # Exactly the commit CI tested (manual runs deploy the selected ref).
+          DEPLOY_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           port: ${{ secrets.DEPLOY_PORT }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
-          command_timeout: 15m
-          script: /opt/wct-training-rq/scripts/deploy.sh
+          fingerprint: ${{ secrets.DEPLOY_HOST_FINGERPRINT }}
+          envs: DEPLOY_SHA
+          command_timeout: 20m
+          script: |
+            set -e
+            cd /opt/wct-training-rq/repo
+            git fetch --prune origin
+            git checkout --force --quiet "$DEPLOY_SHA"
+            ./scripts/deploy.sh "$DEPLOY_SHA"

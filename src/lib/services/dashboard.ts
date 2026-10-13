@@ -3,6 +3,7 @@ import { and, count, desc, eq, gte, inArray, ne, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { departments, requestActions, trainingRequests as tr, users } from "@/db/schema";
 import type { CurrentUser } from "@/lib/auth/load-user";
+import { startOfYearMY, yearInMY } from "@/lib/format";
 import { awaitingActionWhere, visibleRequestsWhere } from "./queries";
 
 const OPEN = ["DRAFT", "PENDING_HOD", "PENDING_LND", "PENDING_HR", "RETURNED"] as const;
@@ -10,7 +11,7 @@ const OPEN = ["DRAFT", "PENDING_HOD", "PENDING_LND", "PENDING_HR", "RETURNED"] a
 export const candidateCountSql = sql<number>`(select count(*) from candidates c where c.request_id = ${tr.id})`;
 
 export async function getDashboard(user: CurrentUser) {
-  const yearStart = new Date(new Date().getFullYear(), 0, 1);
+  const yearStart = startOfYearMY(yearInMY());
   const visible = visibleRequestsWhere(user);
   const awaiting = await awaitingActionWhere(user);
 

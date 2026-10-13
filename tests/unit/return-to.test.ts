@@ -15,3 +15,16 @@ describe("safeReturnTo", () => {
     expect(safeReturnTo("/WCT-Training-RQ/history")).toBe("/history");
   });
 });
+
+import { signinPath } from "@/lib/auth/return-to";
+
+describe("signinPath", () => {
+  it("carries the original page so sign-in returns there", () => {
+    expect(signinPath("/requests/abc?x=1")).toBe("/signin?returnTo=%2Frequests%2Fabc%3Fx%3D1");
+  });
+  it("drops unsafe or missing targets", () => {
+    expect(signinPath(null)).toBe("/signin");
+    expect(signinPath("//evil.com")).toBe("/signin");
+    expect(signinPath("/dashboard")).toBe("/signin");
+  });
+});

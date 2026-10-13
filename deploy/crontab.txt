@@ -1,5 +1,5 @@
 # crontab -e   (as the deploy user)
 # Retry failed Power Automate notifications every 5 minutes
-*/5 * * * * . /opt/wct-training-rq/.env && curl -fsS -X POST -H "Authorization: Bearer $CRON_SECRET" http://127.0.0.1:3010/WCT-Training-RQ/api/cron/notifications >/dev/null 2>&1
+*/5 * * * * set -a; . /opt/wct-training-rq/shared/.env; set +a; curl -fsS -X POST -H "Authorization: Bearer $CRON_SECRET" http://127.0.0.1:3010/WCT-Training-RQ/api/cron/notifications >/dev/null 2>&1
 # Nightly backup at 02:15
-15 2 * * * /opt/wct-training-rq/scripts/backup.sh >> /var/log/wct-training-rq-backup.log 2>&1
+15 2 * * * /opt/wct-training-rq/repo/scripts/backup.sh >> /var/log/wct-training-rq-backup.log 2>&1

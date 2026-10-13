@@ -1,6 +1,8 @@
 import "server-only";
 import { cache } from "react";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { signinPath } from "./return-to";
 import { getSession, isSessionExpired } from "./session";
 import { loadCurrentUser, type CurrentUser } from "./load-user";
 import type { RoleName } from "@/lib/workflow";
@@ -17,7 +19,7 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
 /** For pages: redirect to sign-in when not authenticated. */
 export async function requireUser(): Promise<CurrentUser> {
   const user = await getCurrentUser();
-  if (!user) redirect("/signin");
+  if (!user) redirect(signinPath((await headers()).get("x-trq-path")));
   return user;
 }
 

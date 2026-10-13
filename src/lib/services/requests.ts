@@ -36,7 +36,8 @@ import {
   type DraftInput,
   type LndFieldsInput,
 } from "@/lib/validation/request";
-import { NoDepartmentError, NoHodError, NotFoundError, StaleVersionError, ValidationFailedError } from "./errors";
+import { yearInMY } from "@/lib/format";
+import { NoDepartmentError, NoHodError, NotFoundError, ServiceError, StaleVersionError, ValidationFailedError } from "./errors";
 import { loadParties, roleHolderCounts } from "./parties";
 import { allocateRefNo } from "./ref-no";
 
@@ -218,7 +219,10 @@ export async function performAction(
 
     if (isSubmit) {
       if (!user.departmentId || !user.department) throw new NoDepartmentError();
-      if (!user.department.hodUserId) throw new NoHodError();
+      if (!user.department.isActive) throw new ServiceError("Your department is no longer active. Please contact HR.", 422);
+      const hodId = user.department.hodUserId;
+      const [hod] = hodId ? await tx.select({ isActive: users.isActive }).from(users).where(eq(users.id, hodId)) : [];
+      if (!hod?.isActive) throw new NoHodError();
       const content = await loadContent(tx, r);
       const parsed = requestFormSchema.safeParse(content);
       if (!parsed.success) {
@@ -235,7 +239,7 @@ export async function performAction(
     const now = new Date();
 
     let refNo = r.refNo;
-    if (isSubmit && !refNo) refNo = await allocateRefNo(tx, now.getFullYear());
+    if (isSubmit && !refNo) refNo = await allocateRefNo(tx, yearInMY(now));
 
     const [updated] = await tx
       .update(trainingRequests)
