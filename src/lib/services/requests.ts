@@ -53,7 +53,7 @@ export interface NotifyArgs {
 }
 export type Notifier = (args: NotifyArgs) => Promise<void>;
 
-let notifier: Notifier = async () => {};
+let notifier: Notifier = async (args) => (await import("@/lib/notify/send")).notifyEvent(args);
 /** Wired to Power Automate in production (see lib/notify); stubbed in tests. */
 export function setNotifier(n: Notifier) {
   notifier = n;
