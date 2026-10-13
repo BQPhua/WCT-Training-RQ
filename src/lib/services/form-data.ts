@@ -1,0 +1,49 @@
+import "server-only";
+import type { CurrentUser } from "@/lib/auth/load-user";
+import type { RequestDetail } from "./requests";
+import { listDepartmentsWithBu } from "./requests";
+import { db } from "@/db";
+import { users } from "@/db/schema";
+import { eq } from "drizzle-orm";
+
+/** Data the request form needs about the signed-in requester. */
+export async function requesterContext(user: CurrentUser) {
+  let hodName: string | null = null;
+  if (user.department?.hodUserId) {
+    const [h] = await db.select({ name: users.name, isActive: users.isActive }).from(users).where(eq(users.id, user.department.hodUserId));
+    hodName = h?.isActive ? h.name : null;
+  }
+  const depts = await listDepartmentsWithBu();
+  return {
+    requester: { name: user.name, department: user.department?.name ?? null, businessUnit: user.businessUnit?.name ?? null, hodName },
+    departments: depts.map((d) => ({ id: d.id, name: d.name, buName: d.buName })),
+  };
+}
+
+export function formValuesFrom(detail: RequestDetail) {
+  const r = detail.request;
+  return {
+    initial: {
+      trainingType: (r.trainingType ?? "") as "" | "PLANNED" | "ADHOC",
+      title: r.title,
+      objective: r.objective ?? "",
+      startDate: r.startDate ?? "",
+      endDate: r.endDate ?? "",
+      startTime: r.startTime ?? "",
+      endTime: r.endTime ?? "",
+      feePerPax: r.feePerPax ?? "",
+      venue: r.venue ?? "",
+      conductedBy: r.conductedBy ?? "",
+    },
+    initialCandidates: detail.candidates.map((c) => ({
+      name: c.name,
+      email: c.email ?? undefined,
+      jobTitle: c.jobTitle ?? undefined,
+      department: c.department ?? undefined,
+      staffNo: c.staffNo ?? undefined,
+      userId: c.userId ?? undefined,
+      manual: !c.email,
+    })),
+    initialAttachments: detail.attachments.map((a) => ({ id: a.id, originalName: a.originalName, sizeBytes: a.sizeBytes })),
+  };
+}
