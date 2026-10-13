@@ -79,21 +79,44 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
       </Panel>
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_380px] xl:items-start [&>*]:min-w-0">
+        <div className="space-y-6">
+          <Panel>
+            <PanelHeader
+              title={`Availability board · ${year}`}
+              description="Every request you can see this year, one unit per request, one row per month. Select a unit to open it."
+            />
+            <PanelBody>
+              {d.board.length ? (
+                <AvailabilityBoard items={d.board} awaitingIds={d.awaitingIds} />
+              ) : (
+                <EmptyState title="No requests yet this year">Submitted training requests will appear here as units on the board.</EmptyState>
+              )}
+            </PanelBody>
+          </Panel>
         <Panel>
-          <PanelHeader
-            title={`Availability board · ${year}`}
-            description="Every request you can see this year, one unit each. Hover for details, click to open."
-          />
-          <PanelBody>
-            {d.board.length ? (
-              <AvailabilityBoard items={d.board} awaitingIds={d.awaitingIds} />
-            ) : (
-              <EmptyState title="No requests yet this year">Submitted training requests will appear here as units on the board.</EmptyState>
-            )}
-          </PanelBody>
+          <PanelHeader title="Recent activity" />
+          {d.recentActivity.length ? (
+            <ol className="divide-y divide-line">
+              {d.recentActivity.map((a) => (
+                <li key={a.id} className="flex flex-wrap items-center gap-x-2 gap-y-1 px-5 py-3 text-sm">
+                  <span className="font-medium text-ink">{a.actorName}</span>
+                  <span className="text-muted">
+                    {ACTION_TEXT[a.action] ?? a.action.toLowerCase()}
+                    {a.action === "REJECT" && a.sentBackTo ? ` to ${STAGE_LABEL[a.sentBackTo as Stage]}` : ""}
+                  </span>
+                  <Link href={`/requests/${a.requestId}`} className="min-w-0 truncate font-medium text-brand-text hover:underline">
+                    {a.refNo} · {a.title}
+                  </Link>
+                  <span className="ml-auto text-xs tabular text-muted">{formatDateTimeMY(a.createdAt)}</span>
+                </li>
+              ))}
+            </ol>
+          ) : (
+            <EmptyState title="No activity yet" />
+          )}
         </Panel>
-
-        <Panel className="flex flex-col">
+        </div>
+        <Panel className={`flex flex-col ${d.awaitingMe > 0 ? "order-first xl:order-none" : ""}`}>
           <PanelHeader
             title="Awaiting your action"
             actions={
@@ -126,29 +149,6 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
           )}
         </Panel>
       </div>
-
-      <Panel>
-        <PanelHeader title="Recent activity" />
-        {d.recentActivity.length ? (
-          <ol className="divide-y divide-line">
-            {d.recentActivity.map((a) => (
-              <li key={a.id} className="flex flex-wrap items-center gap-x-2 gap-y-1 px-5 py-3 text-sm">
-                <span className="font-medium text-ink">{a.actorName}</span>
-                <span className="text-muted">
-                  {ACTION_TEXT[a.action] ?? a.action.toLowerCase()}
-                  {a.action === "REJECT" && a.sentBackTo ? ` to ${STAGE_LABEL[a.sentBackTo as Stage]}` : ""}
-                </span>
-                <Link href={`/requests/${a.requestId}`} className="min-w-0 truncate font-medium text-brand-text hover:underline">
-                  {a.refNo} · {a.title}
-                </Link>
-                <span className="ml-auto text-xs tabular text-muted">{formatDateTimeMY(a.createdAt)}</span>
-              </li>
-            ))}
-          </ol>
-        ) : (
-          <EmptyState title="No activity yet" />
-        )}
-      </Panel>
     </div>
   );
 }

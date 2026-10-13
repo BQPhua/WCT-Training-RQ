@@ -37,7 +37,6 @@ export function Nav({ approvals, canReport, isAdmin, onNavigate }: NavProps) {
               active ? "bg-shell-2 text-shell-fg" : "text-shell-muted hover:bg-shell-2/60 hover:text-shell-fg",
             )}
           >
-            {active && <span aria-hidden className="absolute inset-y-2 left-0 w-[3px] rounded-full bg-brand" />}
             <Icon className={cn("size-[18px] shrink-0", active ? "text-brand" : "text-shell-muted group-hover:text-shell-fg")} />
             <span className="truncate">{label}</span>
             {!!badge && (

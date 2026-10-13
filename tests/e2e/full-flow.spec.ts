@@ -65,5 +65,5 @@ test("request → HOD → L&D sends back → resubmit → full approval → PDF 
 
   // 7. History finds it by candidate name
   await hr.goto(`history?q=${encodeURIComponent("Daniel Lim")}`);
-  await expect(hr.getByText(title)).toBeVisible();
+  await expect(hr.getByRole("table").getByText(title)).toBeVisible();
 });

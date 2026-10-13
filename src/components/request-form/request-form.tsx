@@ -70,10 +70,14 @@ export function RequestForm(props: RequestFormProps) {
   const [review, setReview] = React.useState(false);
   const [deptId, setDeptId] = React.useState("");
   const [dirty, setDirty] = React.useState(false);
+  const [savedAt, setSavedAt] = React.useState<{ at: Date; auto: boolean } | null>(null);
+  const savingRef = React.useRef(false);
+  const editSeq = React.useRef(0);
 
   const needsDepartment = !props.requester.department;
   const set = (k: keyof FormValues) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setV((s) => ({ ...s, [k]: e.target.value }));
+    editSeq.current += 1;
     setDirty(true);
     if (errors[k]) setErrors(({ [k]: _drop, ...rest }) => rest);
   };
@@ -95,26 +99,33 @@ export function RequestForm(props: RequestFormProps) {
     };
   }
 
-  async function saveDraft(silent = false): Promise<{ id: string; version: number } | null> {
+  /** mode: "manual" (button), "silent" (before an upload) or "auto" (debounced autosave). */
+  async function saveDraft(mode: "manual" | "silent" | "auto" = "manual"): Promise<{ id: string; version: number } | null> {
     if (!v.title.trim()) {
+      if (mode === "auto") return null;
       setErrors({ title: "Add a training title before saving." });
       document.getElementById("title")?.focus();
       return null;
     }
+    if (savingRef.current) return null;
+    savingRef.current = true;
+    const seq = editSeq.current;
     setSaving(true);
     const r = await saveDraftAction({ id, version, data: payload() });
     setSaving(false);
+    savingRef.current = false;
     if (!r.ok) {
-      setErrors(r.fieldErrors ?? {});
-      toast.error(r.error);
+      if (mode !== "auto") setErrors(r.fieldErrors ?? {});
+      toast.error(mode === "auto" ? `Autosave failed: ${r.error}` : r.error);
       if (r.error.includes("already actioned") || r.error.includes("changed since")) router.refresh();
       return null;
     }
     setId(r.id);
     setVersion(r.version);
-    setDirty(false);
+    if (editSeq.current === seq) setDirty(false);
+    setSavedAt({ at: new Date(), auto: mode === "auto" });
     if (!id) window.history.replaceState(null, "", `${BASE_PATH}/requests/${r.id}/edit`);
-    if (!silent) toast.success("Draft saved");
+    if (mode === "manual") toast.success("Draft saved");
     return r;
   }
 
@@ -153,6 +164,22 @@ export function RequestForm(props: RequestFormProps) {
       router.refresh();
     } else toast.error(r.error);
   }
+
+  // Autosave: 4 s after the last change, and when the tab is hidden (phones kill background tabs).
+  React.useEffect(() => {
+    if (!dirty || !v.title.trim() || review || submitting) return;
+    const t = setTimeout(() => void saveDraft("auto"), 4000);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [v, candidates, dirty, review, submitting]);
+  React.useEffect(() => {
+    const onHide = () => {
+      if (document.visibilityState === "hidden" && dirty && v.title.trim() && !submitting) void saveDraft("auto");
+    };
+    document.addEventListener("visibilitychange", onHide);
+    return () => document.removeEventListener("visibilitychange", onHide);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [v, candidates, dirty, submitting]);
 
   const total = totalFees(v.feePerPax, candidates.length);
 
@@ -293,6 +320,7 @@ export function RequestForm(props: RequestFormProps) {
             value={candidates}
             onChange={(rows) => {
               setCandidates(rows);
+              editSeq.current += 1;
               setDirty(true);
               if (errors.candidates) setErrors(({ candidates: _c, ...rest }) => rest);
             }}
@@ -305,7 +333,7 @@ export function RequestForm(props: RequestFormProps) {
             <h2 className="text-[13px] font-semibold uppercase tracking-[0.08em] text-ink">Supporting documents</h2>
           </div>
           <div className="px-5 py-5 sm:px-6">
-            <AttachmentField items={attachments} onChange={setAttachments} ensureSaved={async () => id ?? (await saveDraft(true))?.id ?? null} />
+            <AttachmentField items={attachments} onChange={setAttachments} ensureSaved={async () => id ?? (await saveDraft("silent"))?.id ?? null} />
           </div>
         </Panel>
       </div>
@@ -338,10 +366,18 @@ export function RequestForm(props: RequestFormProps) {
             <Button type="submit" variant="brand" size="lg" disabled={saving || submitting}>
               <Send /> {props.isReturned ? "Review & resubmit" : "Review & submit"}
             </Button>
-            <Button type="button" variant="outline" onClick={() => saveDraft()} disabled={saving || submitting}>
+            <Button type="button" variant="outline" onClick={() => saveDraft("manual")} disabled={saving || submitting}>
               {saving ? <Loader2 className="animate-spin" /> : <Save />} Save draft
             </Button>
-            {dirty && <p className="text-center text-xs text-muted">Unsaved changes</p>}
+            <p className="text-center text-xs text-muted" aria-live="polite">
+              {saving
+                ? "Saving…"
+                : dirty
+                  ? "Unsaved changes"
+                  : savedAt
+                    ? `Draft saved${savedAt.auto ? " automatically" : ""} at ${savedAt.at.toLocaleTimeString("en-MY", { hour: "numeric", minute: "2-digit" })}`
+                    : null}
+            </p>
           </div>
         </Panel>
       </aside>

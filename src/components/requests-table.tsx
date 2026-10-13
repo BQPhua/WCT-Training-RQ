@@ -54,16 +54,16 @@ export function RequestsTable({ rows, total, f, base, sp, emptyTitle, emptyText 
         ))}
       </ul>
       <div className="hidden overflow-x-auto sm:block">
-        <table className="w-full min-w-[860px] text-sm">
+        <table className="w-full min-w-[820px] table-fixed text-sm">
           <thead className="border-b border-line bg-surface-2 text-xs text-muted">
             <tr>
               <SortHead label="Ref no." col="refNo" f={f} base={base} sp={sp} className="w-36" />
               <SortHead label="Training" col="title" f={f} base={base} sp={sp} />
-              <th scope="col" className="px-4 py-2.5 text-left font-medium">Requester</th>
-              <SortHead label="Dates" col="startDate" f={f} base={base} sp={sp} />
-              <th scope="col" className="px-4 py-2.5 text-right font-medium">Total fees</th>
-              <th scope="col" className="px-4 py-2.5 text-left font-medium">Status</th>
-              <SortHead label="Updated" col="updatedAt" f={f} base={base} sp={sp} className="text-right" />
+              <th scope="col" className="w-44 px-4 py-2.5 text-left font-medium">Requester</th>
+              <SortHead label="Dates" col="startDate" f={f} base={base} sp={sp} className="w-48" />
+              <th scope="col" className="w-32 px-4 py-2.5 text-right font-medium">Total fees</th>
+              <th scope="col" className="w-40 px-4 py-2.5 text-left font-medium">Status</th>
+              <SortHead label="Updated" col="updatedAt" f={f} base={base} sp={sp} className="hidden w-40 text-right 2xl:table-cell" />
             </tr>
           </thead>
           <tbody className="divide-y divide-line">
@@ -74,14 +74,14 @@ export function RequestsTable({ rows, total, f, base, sp, emptyTitle, emptyText 
                     {r.refNo ?? "Draft"}
                   </Link>
                 </td>
-                <td className="max-w-[22rem] px-4 py-3">
+                <td className="min-w-0 px-4 py-3">
                   <span className="block truncate font-medium text-ink">{r.title}</span>
                   <span className="block truncate text-xs text-muted">
                     {r.trainingType === "ADHOC" ? "Ad hoc" : r.trainingType === "PLANNED" ? "Planned" : "—"} · {r.candidateCount} candidate{r.candidateCount === 1 ? "" : "s"}
                   </span>
                 </td>
                 <td className="px-4 py-3">
-                  <span className="block text-ink">{r.requesterName}</span>
+                  <span className="block truncate text-ink">{r.requesterName}</span>
                   <span className="block truncate text-xs text-muted">{[r.departmentName, r.buName].filter(Boolean).join(" · ")}</span>
                 </td>
                 <td className="whitespace-nowrap px-4 py-3 tabular text-ink-2">{formatDateRange(r.startDate, r.endDate)}</td>
@@ -89,7 +89,7 @@ export function RequestsTable({ rows, total, f, base, sp, emptyTitle, emptyText 
                 <td className="px-4 py-3">
                   <StatusBadge status={r.status} />
                 </td>
-                <td className="whitespace-nowrap px-4 py-3 text-right text-xs tabular text-muted">{formatDateTimeMY(r.updatedAt)}</td>
+                <td className="hidden whitespace-nowrap px-4 py-3 text-right text-xs tabular text-muted 2xl:table-cell">{formatDateTimeMY(r.updatedAt)}</td>
               </tr>
             ))}
           </tbody>

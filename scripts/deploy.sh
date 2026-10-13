@@ -79,4 +79,6 @@ if [ -n "$PREV" ] && [ -d "$PREV" ]; then
   ln -sfn "$PREV" "$APP_ROOT/current.tmp" && mv -Tf "$APP_ROOT/current.tmp" "$APP_ROOT/current"
   pm2 reload wct-training-rq --update-env
 fi
+log "Removing failed release $(basename "$REL")"
+rm -rf "$REL"
 exit 1

@@ -32,13 +32,14 @@ export async function getDashboard(user: CurrentUser) {
         title: tr.title,
         status: tr.status,
         startDate: tr.startDate,
+        submittedAt: tr.submittedAt,
         requesterName: users.name,
       })
       .from(tr)
       .innerJoin(users, eq(tr.requesterId, users.id))
-      .where(and(visible, gte(tr.createdAt, yearStart), ne(tr.status, "DRAFT")))
-      .orderBy(tr.createdAt)
-      .limit(160),
+      .where(and(visible, gte(tr.submittedAt, yearStart), ne(tr.status, "DRAFT")))
+      .orderBy(tr.submittedAt)
+      .limit(1000),
     db
       .select({
         id: tr.id,

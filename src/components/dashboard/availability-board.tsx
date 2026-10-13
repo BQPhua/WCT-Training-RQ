@@ -14,7 +14,22 @@ export interface BoardItem {
   status: Status;
   startDate: string | null;
   requesterName: string;
-  mine?: boolean;
+  submittedAt: Date | string | null;
+}
+
+const MONTH_FMT = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Kuala_Lumpur", month: "short" });
+const MONTH_NUM = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Kuala_Lumpur", month: "numeric" });
+
+/** Floors of the chart: one row per submission month, latest on top. */
+function byMonth(items: BoardItem[]) {
+  const rows = new Map<number, { label: string; items: BoardItem[] }>();
+  for (const it of items) {
+    const d = it.submittedAt ? new Date(it.submittedAt) : null;
+    const m = d ? Number(MONTH_NUM.format(d)) : 0;
+    if (!rows.has(m)) rows.set(m, { label: d ? MONTH_FMT.format(d).toUpperCase() : "—", items: [] });
+    rows.get(m)!.items.push(it);
+  }
+  return [...rows.entries()].sort((a, b) => b[0] - a[0]).map(([, v]) => v);
 }
 
 const TILE: Record<Tone, string> = {
@@ -65,43 +80,49 @@ export function AvailabilityBoard({ items, awaitingIds }: { items: BoardItem[]; 
         ))}
       </div>
 
-      <ol className="grid grid-cols-[repeat(auto-fill,minmax(3.25rem,1fr))] gap-1.5" aria-label="Requests this year">
-        {items.map((item, idx) => {
-          const tone = toneOf(item.status);
-          const dim = focus !== null && focus !== tone;
-          const number = item.refNo ? item.refNo.slice(-4) : "—";
-          return (
-            <li key={item.id} style={{ animationDelay: `${Math.min(idx * 12, 600)}ms` }} className="animate-tile">
-              <Tip
-                content={
-                  <span className="block space-y-0.5">
-                    <span className="block font-semibold">{item.refNo ?? "Draft"}</span>
-                    <span className="block">{item.title}</span>
-                    <span className="block opacity-80">
-                      {item.requesterName} · {STATUS_LABEL[item.status]}
-                      {item.startDate ? ` · ${formatDateMY(item.startDate)}` : ""}
-                    </span>
-                  </span>
-                }
-              >
-                <Link
-                  href={`/requests/${item.id}`}
-                  aria-label={`${item.refNo ?? "Draft"}: ${item.title}, ${STATUS_LABEL[item.status]}`}
-                  className={cn(
-                    "relative grid aspect-[5/4] place-items-center rounded-[5px] text-[11px] font-semibold tabular tracking-tight transition-[opacity,transform,filter] duration-200 hover:-translate-y-0.5 hover:shadow-md",
-                    TILE[tone],
-                    dim && "opacity-20 saturate-0",
-                    awaiting.has(item.id) && "ring-2 ring-brand ring-offset-2 ring-offset-surface",
-                  )}
-                >
-                  {number}
-                  {awaiting.has(item.id) && <span aria-hidden className="absolute -right-1 -top-1 size-2.5 rounded-full bg-brand ring-2 ring-surface" />}
-                </Link>
-              </Tip>
-            </li>
-          );
-        })}
-      </ol>
+      <div className="space-y-1.5" aria-label="Requests this year by submission month">
+        {byMonth(items).map((row, r) => (
+          <div key={row.label} className="flex items-stretch gap-2">
+            <span className="w-11 shrink-0 self-center text-right text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">{row.label}</span>
+            <ol className="grid flex-1 grid-cols-[repeat(auto-fill,minmax(3.25rem,1fr))] gap-1.5 border-l border-line pl-2">
+              {row.items.map((item, idx) => {
+                const tone = toneOf(item.status);
+                const dim = focus !== null && focus !== tone;
+                const number = item.refNo ? item.refNo.slice(-4) : "—";
+                return (
+                  <li key={item.id} style={{ animationDelay: `${Math.min(r * 60 + idx * 14, 700)}ms` }} className="animate-tile">
+                    <Tip
+                      content={
+                        <span className="block space-y-0.5">
+                          <span className="block font-semibold">{item.refNo ?? "Draft"}</span>
+                          <span className="block">{item.title}</span>
+                          <span className="block opacity-80">
+                            {item.requesterName} · {STATUS_LABEL[item.status]}
+                            {item.startDate ? ` · starts ${formatDateMY(item.startDate)}` : ""}
+                          </span>
+                        </span>
+                      }
+                    >
+                      <Link
+                        href={`/requests/${item.id}`}
+                        aria-label={`${item.refNo ?? "Draft"}: ${item.title}, ${STATUS_LABEL[item.status]}${awaiting.has(item.id) ? ", waiting for you" : ""}`}
+                        className={cn(
+                          "relative grid aspect-[5/4] place-items-center rounded-[5px] text-[11px] font-semibold tabular tracking-tight transition-[opacity,transform,filter] duration-200 hover:-translate-y-0.5 hover:shadow-md",
+                          TILE[tone],
+                          dim && "opacity-20 saturate-0",
+                          awaiting.has(item.id) && "ring-2 ring-brand ring-offset-2 ring-offset-surface",
+                        )}
+                      >
+                        {number}
+                      </Link>
+                    </Tip>
+                  </li>
+                );
+              })}
+            </ol>
+          </div>
+        ))}
+      </div>
       {awaitingIds.length > 0 && (
         <p className="mt-4 flex items-center gap-2 text-[13px] text-muted">
           <span className="inline-block size-3 rounded-[3px] ring-2 ring-brand ring-offset-1 ring-offset-surface" aria-hidden />

@@ -4,7 +4,7 @@
  * Usage: npx tsx scripts/seed-demo-requests.ts
  */
 import "dotenv/config";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db, closeDb } from "../src/db";
 import { users } from "../src/db/schema";
 import { loadCurrentUser } from "../src/lib/auth/load-user";
@@ -88,6 +88,33 @@ async function main() {
     }
     n++;
   }
+  // Spread demo requests over Jan–Oct with realistic gaps between workflow steps,
+  // so the availability board's month rows and stage-turnaround report have shape.
+  await db.execute(sql`
+    with req as (
+      select id, row_number() over (order by created_at) - 1 as i from training_requests
+    ), base as (
+      -- newest request ~6 days ago, then one every ~9 days back towards January (never in the future)
+      select id, date_trunc('hour', now()) - interval '6 days' - (29 - i) * interval '9 days' as t0 from req
+    ), steps as (
+      select a.id, b.t0 + (row_number() over (partition by a.request_id order by a.created_at) - 1) * interval '19 hours' as t
+      from request_actions a join base b on b.id = a.request_id
+    )
+    update request_actions ra set created_at = steps.t from steps where steps.id = ra.id
+  `);
+  await db.execute(sql`
+    update training_requests tr set
+      created_at = x.first_at,
+      submitted_at = case when tr.submitted_at is null then null else x.submit_at end,
+      finalised_at = case when tr.finalised_at is null then null else x.last_at end,
+      updated_at = x.last_at
+    from (
+      select request_id, min(created_at) as first_at, max(created_at) as last_at,
+             max(created_at) filter (where action in ('SUBMIT','RESUBMIT')) as submit_at
+      from request_actions group by request_id
+    ) x where x.request_id = tr.id
+  `);
+  await db.execute(sql`update request_revisions rv set created_at = tr.submitted_at from training_requests tr where tr.id = rv.request_id and tr.submitted_at is not null`);
   console.log(`Created ${n} demo requests.`);
   await closeDb();
 }

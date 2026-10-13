@@ -215,6 +215,7 @@
   }
 }
 
-/* Data-viz series (validated with dataviz/validate_palette.js, light & dark) */
-:root { --series-1: #2a78d6; --series-2: #d55181; --series-3: #7a5bd0; --grid: oklch(0.93 0.008 255); }
-.dark { --series-1: #3987e5; --series-2: #d55181; --series-3: #8f74e0; --grid: oklch(0.3 0.025 259); }
+/* Data-viz series from the world (ink-navy, brass, rose) — validated all-pairs, light & dark,
+   with dataviz/validate_palette.js; kept clear of the reserved status colours. */
+:root { --series-1: #2e5a9c; --series-2: #a8742a; --series-3: #c75b8e; --grid: oklch(0.93 0.008 255); }
+.dark { --series-1: #4a7cc4; --series-2: #b8862f; --series-3: #d36a9c; --grid: oklch(0.3 0.025 259); }

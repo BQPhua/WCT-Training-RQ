@@ -16,7 +16,8 @@ import { STAGE_LABEL, STATUSES } from "@/lib/workflow";
 export const metadata = { title: "Reports" };
 
 const compactRM = (v: number) => (v >= 1000 ? `RM ${(v / 1000).toFixed(v >= 10000 ? 0 : 1)}k` : `RM ${v.toFixed(0)}`);
-const hours = (h: number | null) => (h === null ? "No decisions yet" : h < 24 ? `${h.toFixed(1)} h` : `${(h / 24).toFixed(1)} days`);
+const hours = (h: number | null) =>
+  h === null ? "No decisions yet" : h < 1 ? (h * 60 < 1 ? "< 1 min" : `${Math.round(h * 60)} min`) : h < 24 ? `${h.toFixed(1)} h` : `${(h / 24).toFixed(1)} days`;
 
 export default async function ReportsPage({ searchParams }: PageProps<"/reports">) {
   const user = await requireUser();
@@ -116,7 +117,7 @@ export default async function ReportsPage({ searchParams }: PageProps<"/reports"
           <Panel>
             <PanelHeader title="Where requests stand" />
             <PanelBody>
-              <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 {STATUSES.filter((s) => s !== "DRAFT").map((s) => (
                   <li key={s} className="flex items-center justify-between gap-2 rounded-lg border border-line px-3 py-2">
                     <StatusBadge status={s} />

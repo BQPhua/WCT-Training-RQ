@@ -74,6 +74,7 @@ export function ActionPanel({
 
   const approver = has("APPROVE");
   return (
+    <>
     <div className={cn("rounded-xl border p-4 sm:p-5", approver ? "border-pending/60 bg-pending-soft/60" : "border-line bg-surface")}>
       {approver && (
         <p className="mb-3 text-sm text-ink">
@@ -214,5 +215,21 @@ export function ActionPanel({
         </DialogContent>
       </Dialog>
     </div>
+    {approver && (
+      <>
+        <div aria-hidden className="h-16 sm:hidden" />
+        <div className="fixed inset-x-0 bottom-0 z-30 flex gap-2 border-t border-line bg-surface/95 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-lg backdrop-blur sm:hidden">
+          <Button variant="approve" size="lg" className="flex-1" onClick={() => setApproveOpen(true)} disabled={!!busy}>
+            <Check /> Approve
+          </Button>
+          {reject && (
+            <Button variant="outline" size="lg" className="flex-1 text-returned-text" onClick={() => setRejectOpen(true)} disabled={!!busy}>
+              <CornerUpLeft /> Send back
+            </Button>
+          )}
+        </div>
+      </>
+    )}
+    </>
   );
 }
