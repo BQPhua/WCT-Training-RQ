@@ -69,7 +69,7 @@ On every workflow event (submitted, approved, rejected, cancelled, commented), t
    - Inside it, add **Microsoft Teams → Post message in a chat or channel**: Post as *Flow bot*, Post in *Chat with Flow bot*, Recipient *Current item*.
    - Message: `@{triggerBody()?['subject']}<br><a href="@{triggerBody()?['link']}">Open request</a>`
 
-4. Add **Response** with Status code `202`. This lets the app know delivery was accepted.
+4. Add **Response** with Status code `200` (any 2xx works). Put it after the email step, so a failed send returns an error and the app retries it later.
 
 5. **Save.** Copy the trigger's **HTTP POST URL** and put it in the server's `.env`:
 
