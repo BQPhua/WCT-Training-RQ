@@ -42,7 +42,7 @@ Staff raise training requests, and approvals flow **Requester → Department HOD
 ## Architecture
 
 ```
-Browser ─HTTPS─> Nginx (hrforms.wct.my) ── /WCT-Training-RQ ──> Next.js 16 (PM2, 127.0.0.1:3010)
+Browser ─HTTPS─> Nginx (hrforms.wct.my) ── /WCT-Training-RQ ──> Next.js 16 (PM2, 127.0.0.1:3110)
                                                                   ├─ PostgreSQL 16 (Drizzle ORM)
                                                                   ├─ /var/lib/wct-training-rq/uploads
                                                                   ├─ Microsoft Entra ID (OIDC + Graph)

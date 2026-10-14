@@ -18,7 +18,7 @@ Target: `https://hrforms.wct.my/WCT-Training-RQ/` on the existing Ubuntu server 
 
 | Item | Value |
 |---|---|
-| Process | PM2 app `wct-training-rq` on `127.0.0.1:3010` |
+| Process | PM2 app `wct-training-rq` on `127.0.0.1:3110` |
 | Database | PostgreSQL 16, database `wct_training_rq`, user `wct_trq` |
 | Deploy user | `trq` (owns the app; GitHub Actions SSHes in as this user) |
 
@@ -88,7 +88,7 @@ Fill in every value:
 cd /opt/wct-training-rq/current && npm run db:seed     # creates business units Land, E&C, Malls (idempotent)
 pm2 startup systemd -u trq --hp /home/trq              # copy-run the sudo command it prints
 pm2 save
-curl http://127.0.0.1:3010/WCT-Training-RQ/api/health  # {"ok":true,"db":true}
+curl http://127.0.0.1:3110/WCT-Training-RQ/api/health  # {"ok":true,"db":true}
 ```
 
 > Never run `SEED_DEMO=true` or `npm run db:seed-demo` on production. They create demo users and requests.
@@ -193,6 +193,6 @@ pg_restore --clean --if-exists -d "$DATABASE_URL" /var/backups/wct-training-rq/d
 ## Operations
 
 - Logs: `pm2 logs wct-training-rq`
-- Status: `pm2 status`, `curl http://127.0.0.1:3010/WCT-Training-RQ/api/health`
+- Status: `pm2 status`, `curl http://127.0.0.1:3110/WCT-Training-RQ/api/health`
 - After editing `shared/.env`: `pm2 reload wct-training-rq --update-env`
 - Client secret expiry: renew it in Entra before it expires ([ENTRA_SETUP.md](ENTRA_SETUP.md))

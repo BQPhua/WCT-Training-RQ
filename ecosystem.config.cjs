@@ -9,7 +9,7 @@ module.exports = {
       name: "wct-training-rq",
       cwd: `${APP_ROOT}/current`,
       script: "node_modules/next/dist/bin/next",
-      args: `start -p ${process.env.PORT || 3010} -H 127.0.0.1`,
+      args: `start -p ${process.env.PORT || 3110} -H 127.0.0.1`,
       env: { NODE_ENV: "production", TZ: "Asia/Kuala_Lumpur" },
       instances: 1,
       max_memory_restart: "768M",

@@ -16,7 +16,7 @@ set -Eeuo pipefail
 APP_ROOT="${APP_ROOT:-/opt/wct-training-rq}"
 REPO="$APP_ROOT/repo"
 KEEP="${KEEP_RELEASES:-5}"
-HEALTH_URL="${HEALTH_URL:-http://127.0.0.1:3010/WCT-Training-RQ/api/health}"
+HEALTH_URL="${HEALTH_URL:-http://127.0.0.1:3110/WCT-Training-RQ/api/health}"
 log() { printf '\n[deploy %s] %s\n' "$(date '+%F %T')" "$*"; }
 
 [ -f "$APP_ROOT/shared/.env" ] || { echo "Missing $APP_ROOT/shared/.env (copy .env.example and fill it in)"; exit 1; }
