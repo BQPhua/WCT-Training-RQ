@@ -15,7 +15,7 @@ set -Eeuo pipefail
 
 APP_ROOT="${APP_ROOT:-/opt/wct-training-rq}"
 REPO="$APP_ROOT/repo"
-KEEP="${KEEP_RELEASES:-5}"
+KEEP="${KEEP_RELEASES:-3}"
 HEALTH_URL="${HEALTH_URL:-http://127.0.0.1:3110/WCT-Training-RQ/api/health}"
 log() { printf '\n[deploy %s] %s\n' "$(date '+%F %T')" "$*"; }
 
@@ -47,8 +47,15 @@ npm ci --no-audit --no-fund
 log "Applying database migrations (forward-only, additive)"
 npm run db:migrate
 
+log "Seeding reference data (business units; idempotent, never demo data)"
+SEED_DEMO=false npm run db:seed
+
 log "Building"
 npm run build
+
+log "Trimming release (dev dependencies, build cache) to save disk"
+npm prune --omit=dev --no-audit --no-fund
+rm -rf .next/cache
 
 log "Switching current -> $(basename "$REL")"
 ln -sfn "$REL" "$APP_ROOT/current.tmp"

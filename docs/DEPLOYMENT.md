@@ -10,7 +10,7 @@ Target: `https://hrforms.wct.my/WCT-Training-RQ/` on the existing Ubuntu server 
 ├── shared/.env            secrets & config (chmod 600, NEVER in git)
 ├── releases/
 │   ├── 20261014093000-1a2b3c4/   one immutable build per deploy (own node_modules + .next)
-│   └── …                  (the newest 5 are kept)
+│   └── …                  (the newest 3 are kept, ~700 MB each)
 └── current -> releases/…  symlink PM2 runs from
 /var/lib/wct-training-rq/uploads    attachments (outside the releases, survives deploys)
 /var/backups/wct-training-rq        nightly DB + uploads backups (30 days)
@@ -24,7 +24,7 @@ Target: `https://hrforms.wct.my/WCT-Training-RQ/` on the existing Ubuntu server 
 
 How a deploy works (`scripts/deploy.sh`):
 
-1. A new folder is built under `releases/` with `npm ci`, migrations and `next build`.
+1. A new folder is built under `releases/` with `npm ci`, migrations, the reference-data seed (business units; idempotent) and `next build`. Dev dependencies and the build cache are then removed to save disk.
 2. Only when all of that succeeds is `current` switched atomically and PM2 reloaded.
 3. If the health check then fails, `current` is switched back to the previous release automatically.
 4. A failed build never touches the running site.
@@ -85,7 +85,6 @@ Fill in every value:
 ```bash
 # still as trq
 /opt/wct-training-rq/repo/scripts/deploy.sh main       # build release, migrate, start under PM2, health-check
-cd /opt/wct-training-rq/current && npm run db:seed     # creates business units Land, E&C, Malls (idempotent)
 pm2 startup systemd -u trq --hp /home/trq              # copy-run the sudo command it prints
 pm2 save
 curl http://127.0.0.1:3110/WCT-Training-RQ/api/health  # {"ok":true,"db":true}
