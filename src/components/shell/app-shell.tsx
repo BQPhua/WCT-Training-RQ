@@ -22,7 +22,12 @@ export interface ShellUser {
 
 function UserMenu({ user }: { user: ShellUser }) {
   const { setTheme, theme } = useTheme();
+  // Kept outside the menu: the menu unmounts its items as soon as one is
+  // selected, which would cancel a submit button placed inside it.
+  const signOutForm = React.useRef<HTMLFormElement>(null);
   return (
+    <>
+    <form ref={signOutForm} action={`${BASE_PATH}/api/auth/logout`} method="post" hidden />
     <Menu>
       <MenuTrigger className="flex w-full cursor-pointer items-center gap-3 rounded-lg p-2 text-left hover:bg-shell-2/60 outline-none focus-visible:ring-2 focus-visible:ring-brand">
         <Avatar name={user.name} />
@@ -53,15 +58,12 @@ function UserMenu({ user }: { user: ShellUser }) {
           );
         })}
         <MenuSeparator />
-        <form action={`${BASE_PATH}/api/auth/logout`} method="post">
-          <MenuItem asChild>
-            <button type="submit" className="w-full">
-              <LogOut /> Sign out
-            </button>
-          </MenuItem>
-        </form>
+        <MenuItem onSelect={() => signOutForm.current?.submit()}>
+          <LogOut /> Sign out
+        </MenuItem>
       </MenuContent>
     </Menu>
+    </>
   );
 }
 
