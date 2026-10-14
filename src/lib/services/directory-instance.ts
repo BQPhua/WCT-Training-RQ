@@ -24,7 +24,7 @@ async function localSearch(q: string): Promise<DirectoryPerson[]> {
 
 export const directory = createDirectory({
   config:
-    env.ENTRA_TENANT_ID && env.ENTRA_CLIENT_ID && env.ENTRA_CLIENT_SECRET
+    env.DIRECTORY_SEARCH_GRAPH && env.ENTRA_TENANT_ID && env.ENTRA_CLIENT_ID && env.ENTRA_CLIENT_SECRET
       ? { tenantId: env.ENTRA_TENANT_ID, clientId: env.ENTRA_CLIENT_ID, clientSecret: env.ENTRA_CLIENT_SECRET }
       : null,
   localSearch,

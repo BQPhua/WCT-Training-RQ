@@ -45,6 +45,10 @@ export const env = {
   get ENTRA_CLIENT_SECRET(): string | undefined {
     return process.env.ENTRA_CLIENT_SECRET;
   },
+  /** Company-wide people search via Graph (needs User.Read.All with admin consent). Set "false" to search only users already in the app. */
+  get DIRECTORY_SEARCH_GRAPH(): boolean {
+    return process.env.DIRECTORY_SEARCH_GRAPH !== "false";
+  },
   get POWER_AUTOMATE_FLOW_URL(): string | undefined {
     return process.env.POWER_AUTOMATE_FLOW_URL || undefined;
   },

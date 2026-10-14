@@ -23,11 +23,21 @@ The app signs users in with their WCT Microsoft 365 account (OpenID Connect with
 | Type | Permission | Why |
 |---|---|---|
 | Delegated | `openid`, `profile`, `email`, `User.Read` | Sign-in, and reading the user's own name, job title and department |
-| Application | `User.Read.All` | Server-side staff search for the candidate picker |
+| Application (optional) | `User.Read.All` | Company-wide staff search in the people picker |
 
 Click **Grant admin consent for WCT**. All rows must show a green tick.
 
-> Without `User.Read.All`, the candidate picker still works, but it can only search people who have already signed in to the app. Manual entry is always available.
+### Without `User.Read.All`
+
+`User.Read.All` needs an IT admin's consent. The app works fully without it:
+
+1. Don't add `User.Read.All`, and set `DIRECTORY_SEARCH_GRAPH=false` in `shared/.env`.
+2. The people picker then searches only staff who have **already signed in** to the app. Each person's name, job title and department are filled in from Microsoft 365 at their first sign-in, using `User.Read`.
+3. To assign a role to someone who hasn't signed in yet (for example a new HOD), use **Admin settings → Users → Add user** with their name and work email. Their record links up automatically when they sign in.
+
+To switch on company-wide search later, have IT add `User.Read.All` with admin consent, set `DIRECTORY_SEARCH_GRAPH=true`, and run `pm2 reload wct-training-rq --update-env`.
+
+> The delegated permissions (`openid`, `profile`, `email`, `User.Read`) normally don't need admin consent. However, if WCT's tenant blocks user consent, staff will see "Need admin approval" at sign-in. In that case IT must click **Grant admin consent** once for these four permissions. They are low-risk: each user can read only their own profile.
 
 ## 4. Optional: restrict who can sign in
 
@@ -35,7 +45,7 @@ To limit access to specific staff, go to **Enterprise applications → WCT HR Fo
 
 ## 5. Configure the server
 
-In `/opt/wct-training-rq/.env`:
+In `/opt/wct-training-rq/shared/.env`:
 
 ```env
 ENTRA_TENANT_ID=<Directory (tenant) ID>
