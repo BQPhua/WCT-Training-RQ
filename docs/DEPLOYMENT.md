@@ -90,7 +90,11 @@ pm2 save
 curl http://127.0.0.1:3110/WCT-Training-RQ/api/health  # {"ok":true,"db":true}
 ```
 
-> Never run `SEED_DEMO=true` or `npm run db:seed-demo` on production. They create demo users and requests.
+> **Sample data for a trial run** (optional): `sudo -iu trq /opt/wct-training-rq/current/scripts/demo-data.sh load`
+> - It adds 12 demo people (`@demo.wct.my`), 7 demo departments and about 30 requests in every status. No emails are sent.
+> - Load it **before** you create real departments.
+> - **Remove it before go-live** with `… demo-data.sh remove`. Otherwise the demo L&D, HR Head and BU Admin accounts would be included in real notifications.
+> - Removal deletes only demo records, and reference numbers continue from the highest real one.
 
 ## 6. Nginx
 
@@ -107,48 +111,31 @@ As `trq`, run `crontab -e` and paste the two lines from [`deploy/crontab.txt`](.
 
 ## 8. Auto-deploy from GitHub
 
-Every push to `main` runs CI (lint, types, unit, integration, build, E2E). When CI passes, the **Deploy** workflow SSHes into the server and deploys **exactly the commit CI tested**.
+Every push to `main` runs **CI** on GitHub's own machines (lint, types, unit, integration, build, E2E). When CI passes, the **Deploy** workflow runs on a **self-hosted runner on this server**, as `trq`, and deploys **exactly the commit CI tested** via `scripts/ci-deploy-gate.sh` → `scripts/deploy.sh`.
 
-1. **Deploy key on the server** (as `trq`):
+The server only makes outbound HTTPS connections to GitHub, so no inbound SSH, deploy keys or deploy secrets are needed. This suits an internal server.
+
+1. **Register the runner.** In GitHub, open the repo and go to **Settings → Actions → Runners → New self-hosted runner → Linux x64**. Keep that page open: it shows the current download link and a one-time token. Then, on the server:
 
    ```bash
-   ssh-keygen -t ed25519 -f ~/.ssh/github_deploy -N "" -C "github-actions-deploy"
-   echo "command=\"/opt/wct-training-rq/repo/scripts/ci-deploy-gate.sh\",no-port-forwarding,no-pty $(cat ~/.ssh/github_deploy.pub)" >> ~/.ssh/authorized_keys
-   chmod 600 ~/.ssh/authorized_keys
-   cat ~/.ssh/github_deploy        # copy the PRIVATE key for the GitHub secret below…
-   rm ~/.ssh/github_deploy         # …then delete it from the server
-   ssh-keyscan -t ed25519 localhost 2>/dev/null | ssh-keygen -lf - -E sha256   # host fingerprint (the SHA256:… part)
+   sudo -iu trq
+   mkdir -p ~/actions-runner && cd ~/actions-runner
+   # Run the "Download" commands from the GitHub page here (curl … and tar xzf …).
+   ./config.sh --url https://github.com/BQPhua/WCT-Training-RQ --token <TOKEN-FROM-PAGE> \
+     --name wct-hrform01-trq --labels wct-training-rq --work _work --unattended
+   exit
+   sudo bash -c "cd /home/trq/actions-runner && ./svc.sh install trq && ./svc.sh start && ./svc.sh status"
    ```
 
-   The `command=` restriction means this key can only trigger a deploy, never open a shell.
+   GitHub should then show the runner as **Idle**, with labels `self-hosted, Linux, X64, wct-training-rq`.
 
-2. **GitHub secrets.** In the repo, go to **Settings → Secrets and variables → Actions → New repository secret** and add:
+2. **Protect the runner (public repo).** Go to **Settings → Actions → General → Approval for running fork pull request workflows from contributors** and choose **Require approval for all external contributors**. Only the Deploy workflow targets the runner, and it only runs for pushes to this repo's `main`. This setting makes sure a stranger's pull request can never run code on the server without your approval.
 
-   | Secret | Value |
-   |---|---|
-   | `DEPLOY_HOST` | the server's public hostname or IP |
-   | `DEPLOY_PORT` | SSH port (usually `22`) |
-   | `DEPLOY_USER` | `trq` |
-   | `DEPLOY_SSH_KEY` | the private key you copied |
-   | `DEPLOY_HOST_FINGERPRINT` | the `SHA256:…` fingerprint |
+3. **Environment.** Go to **Settings → Environments → New environment** and name it `production`. Optionally add yourself as a required reviewer, so each deploy waits for your click.
 
-3. **Environment.** Go to **Settings → Environments → New environment** and create `production`. Optionally add yourself as a required reviewer, so every deploy waits for your click.
+Deploy by hand any time with **Actions → Deploy → Run workflow**, or on the server with `sudo -iu trq /opt/wct-training-rq/repo/scripts/deploy.sh`.
 
-4. **Firewall.** GitHub-hosted runners must be able to reach the server's SSH port. If the server only accepts SSH from the office network, use a **self-hosted runner** on the server instead:
-   - Go to **Settings → Actions → Runners → New self-hosted runner** and follow the Linux steps as `trq`.
-   - Install it as a service with `sudo ./svc.sh install trq && sudo ./svc.sh start`.
-   - In `.github/workflows/deploy.yml`, change `runs-on: ubuntu-latest` to `runs-on: self-hosted`, and replace the SSH step with:
-
-   ```yaml
-   - name: Deploy
-     run: |
-       cd /opt/wct-training-rq/repo
-       git fetch --prune origin
-       git checkout --force "${{ github.event.workflow_run.head_sha || github.sha }}"
-       ./scripts/deploy.sh "${{ github.event.workflow_run.head_sha || github.sha }}"
-   ```
-
-You can also deploy manually with **Actions → Deploy → Run workflow**, or on the server with `/opt/wct-training-rq/repo/scripts/deploy.sh main`.
+Runner service: `sudo systemctl status 'actions.runner.*wct-hrform01-trq*'`. To remove it: `cd /home/trq/actions-runner && sudo ./svc.sh uninstall`, then `./config.sh remove --token <token>` as `trq`.
 
 ## 9. First-time configuration in the app
 

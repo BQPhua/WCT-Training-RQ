@@ -1,14 +1,14 @@
+import Image from "next/image";
 import { cn } from "@/lib/utils";
+import logo from "./wct-logo.png";
 
-/** Placeholder wordmark until WCT supplies its official logo (swap this component). */
+/** WCT logo + product name. Static import keeps the URL basePath-aware. */
 export function Wordmark({ className, compact }: { className?: string; compact?: boolean }) {
   return (
-    <span className={cn("flex items-center gap-2.5", className)}>
-      <span aria-hidden className="grid size-8 place-items-center rounded-md bg-brand text-[13px] font-bold tracking-tight text-brand-fg">
-        WCT
-      </span>
+    <span className={cn("flex items-center gap-3", className)}>
+      <Image src={logo} alt="WCT" unoptimized priority className="h-9 w-auto shrink-0" />
       {!compact && (
-        <span className="leading-tight">
+        <span className="border-l border-shell-line pl-3 leading-tight">
           <span className="block text-[13px] font-semibold text-shell-fg">Training RQ</span>
           <span className="block text-[11px] text-shell-muted">WCT HR Forms</span>
         </span>

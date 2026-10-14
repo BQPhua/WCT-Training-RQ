@@ -1,5 +1,7 @@
 import React from "react";
-import { Document, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
+import fs from "node:fs";
+import path from "node:path";
+import { Document, Image, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 import { formatDateMY, formatDateRange, formatDateTimeMY, formatMYR, formatTime12, totalFees } from "@/lib/format";
 import { STATUS_LABEL } from "@/lib/workflow";
 import type { PdfData } from "./types";
@@ -11,10 +13,20 @@ const LINE = "#94a3b8";
 const SOFT = "#cbd5e1";
 const PANEL = "#f1f5f9";
 
+/** WCT logo for the form header; omitted (text only) if the file is missing. */
+const LOGO: Buffer | null = (() => {
+  try {
+    return fs.readFileSync(path.join(process.cwd(), "public/brand/wct-logo.png"));
+  } catch {
+    return null;
+  }
+})();
+
 const s = StyleSheet.create({
   page: { paddingTop: 26, paddingBottom: 40, paddingHorizontal: 40, fontFamily: "Helvetica", fontSize: 9, color: INK },
   header: { flexDirection: "row", borderWidth: 2, borderColor: INK, marginBottom: 6 },
-  headerLeft: { flex: 1, paddingVertical: 10, paddingHorizontal: 12 },
+  headerLeft: { flex: 1, flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 10, paddingHorizontal: 12 },
+  logo: { height: 38, width: 66, objectFit: "contain" },
   company: { fontFamily: "Helvetica-Bold", fontSize: 18, letterSpacing: 0.5 },
   formName: { fontFamily: "Helvetica-Bold", fontSize: 11, color: SLATE, marginTop: 3, letterSpacing: 0.4 },
   headerRight: { width: 165, backgroundColor: PANEL, borderLeftWidth: 1, borderLeftColor: SOFT, paddingVertical: 10, paddingHorizontal: 12, alignItems: "flex-end", justifyContent: "center" },
@@ -83,8 +95,12 @@ export function TrainingRqDocument({ d }: { d: PdfData }) {
 
         <View style={s.header}>
           <View style={s.headerLeft}>
-            <Text style={s.company}>WCT BERHAD</Text>
-            <Text style={s.formName}>TRAINING REQUISITION FORM</Text>
+            {/* eslint-disable-next-line jsx-a11y/alt-text -- react-pdf Image has no alt */}
+            {LOGO && <Image style={s.logo} src={{ data: LOGO, format: "png" }} />}
+            <View>
+              <Text style={s.company}>WCT BERHAD</Text>
+              <Text style={s.formName}>TRAINING REQUISITION FORM</Text>
+            </View>
           </View>
           <View style={s.headerRight}>
             <Text style={s.meta}>Ref No: WCT-F-4.18-2</Text>
