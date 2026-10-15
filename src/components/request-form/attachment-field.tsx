@@ -93,7 +93,7 @@ export function AttachmentField({
       >
         {busy ? <Loader2 className="size-5 animate-spin text-muted" /> : <Paperclip className="size-5 text-muted" />}
         <span className="text-sm font-medium text-ink">{busy ? "Uploading…" : "Attach brochure or quotation"}</span>
-        <span className="text-xs text-muted">PDF, Word, Excel or image · up to 10 MB each · max {MAX_ATTACHMENTS}</span>
+        <span className="text-xs text-muted">PDF, Word, Excel or image · up to 5 MB each · max {MAX_ATTACHMENTS}</span>
         <input ref={inputRef} type="file" multiple accept={ACCEPT_ATTR} className="sr-only" onChange={(e) => upload(e.target.files)} disabled={busy || items.length >= MAX_ATTACHMENTS} />
       </label>
     </div>

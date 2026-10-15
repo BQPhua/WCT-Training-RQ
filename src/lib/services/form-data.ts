@@ -3,8 +3,8 @@ import type { CurrentUser } from "@/lib/auth/load-user";
 import type { RequestDetail } from "./requests";
 import { listDepartmentsWithBu } from "./requests";
 import { db } from "@/db";
-import { users } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { businessUnitAdmins, users } from "@/db/schema";
+import { and, eq } from "drizzle-orm";
 
 /** Data the request form needs about the signed-in requester. */
 export async function requesterContext(user: CurrentUser) {
@@ -13,9 +13,22 @@ export async function requesterContext(user: CurrentUser) {
     const [h] = await db.select({ name: users.name, isActive: users.isActive }).from(users).where(eq(users.id, user.department.hodUserId));
     hodName = h?.isActive ? h.name : null;
   }
+  const buAdmins = user.businessUnit
+    ? await db
+        .select({ name: users.name })
+        .from(businessUnitAdmins)
+        .innerJoin(users, eq(businessUnitAdmins.userId, users.id))
+        .where(and(eq(businessUnitAdmins.businessUnitId, user.businessUnit.id), eq(users.isActive, true)))
+    : [];
   const depts = await listDepartmentsWithBu();
   return {
-    requester: { name: user.name, department: user.department?.name ?? null, businessUnit: user.businessUnit?.name ?? null, hodName },
+    requester: {
+      name: user.name,
+      department: user.department?.name ?? null,
+      businessUnit: user.businessUnit?.name ?? null,
+      hodName,
+      buAdminNames: buAdmins.length ? buAdmins.map((b) => b.name).join(", ") : null,
+    },
     departments: depts.map((d) => ({ id: d.id, name: d.name, buName: d.buName })),
   };
 }
