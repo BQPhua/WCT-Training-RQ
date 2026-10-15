@@ -17,7 +17,8 @@ async function approved(email: string, hod: string, fee: string, n: number) {
   const u = await asUser(email);
   const { id } = await createDraft(u, { ...validDraft, feePerPax: fee, candidates: Array.from({ length: n }, (_, i) => ({ name: `Person ${i}` })) });
   let v = (await performAction(u, { requestId: id, version: 1, type: "SUBMIT" })).version;
-  for (const a of [hod, "lnd1@demo.wct.my", "hrhead@demo.wct.my"]) v = (await performAction(await asUser(a), { requestId: id, version: v, type: "APPROVE" })).version;
+  const bua = hod.replace("hod.", "buadmin.");
+  for (const a of [hod, bua, "lnd1@demo.wct.my", "hrhead@demo.wct.my"]) v = (await performAction(await asUser(a), { requestId: id, version: v, type: "APPROVE" })).version;
 }
 
 describe("getReports", () => {
@@ -30,7 +31,7 @@ describe("getReports", () => {
     expect(fees.MALLS).toBe("50.00");
     expect(r.byMonth).toHaveLength(12);
     expect(r.byType.PLANNED).toBe(2);
-    expect(r.turnaround.map((t) => t.stage)).toEqual(["HOD", "LND", "HR"]);
+    expect(r.turnaround.map((t) => t.stage)).toEqual(["HOD", "BU", "LND", "HR"]);
     expect(r.statusCounts.APPROVED).toBe(2);
   });
 

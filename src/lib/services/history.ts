@@ -66,7 +66,7 @@ async function whereFor(user: CurrentUser, f: HistoryFilters): Promise<SQL> {
   const parts: SQL[] = [visibleRequestsWhere(user)];
   if (f.scope === "mine") parts.push(eq(tr.requesterId, user.id));
   if (f.scope === "approvals") parts.push(await approvalsWhere(user));
-  if (f.status === "OPEN") parts.push(inArray(tr.status, ["PENDING_HOD", "PENDING_LND", "PENDING_HR", "RETURNED"]));
+  if (f.status === "OPEN") parts.push(inArray(tr.status, ["PENDING_HOD", "PENDING_BU", "PENDING_LND", "PENDING_HR", "RETURNED"]));
   else if (f.status) parts.push(eq(tr.status, f.status));
   if (f.buId) parts.push(eq(tr.businessUnitId, f.buId));
   if (f.departmentId) parts.push(eq(tr.departmentId, f.departmentId));

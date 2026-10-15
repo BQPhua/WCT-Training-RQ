@@ -20,13 +20,13 @@ On every workflow event (submitted, approved, rejected, cancelled, commented), t
   "remark": "Please attach the provider quotation.",
   "to": ["aisyah@wct.my", "buadmin.land@wct.my"],
   "cc": [],
-  "subject": "[Training RQ] TRQ-2026-0007 – Rejected (sent back to Requester): Advanced Contract Administration",
+  "subject": "[Training RQ] TRQ-2026-0007 – Rejected (returned to requester): Advanced Contract Administration",
   "messageHtml": "<div>…ready-to-send HTML email body…</div>",
   "link": "https://hrforms.wct.my/WCT-Training-RQ/requests/7d0f…"
 }
 ```
 
-`event` is one of `SUBMITTED`, `RESUBMITTED`, `HOD_APPROVED`, `LND_APPROVED`, `FINAL_APPROVED`, `REJECTED`, `CANCELLED` or `COMMENTED`. All user-entered text inside `messageHtml` is already HTML-escaped.
+`event` is one of `SUBMITTED`, `RESUBMITTED`, `HOD_APPROVED`, `BU_APPROVED`, `LND_APPROVED`, `FINAL_APPROVED`, `REJECTED`, `CANCELLED` or `COMMENTED`. All user-entered text inside `messageHtml` is already HTML-escaped.
 
 ## Build the flow (about 10 minutes)
 

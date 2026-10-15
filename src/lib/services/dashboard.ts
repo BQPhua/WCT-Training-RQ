@@ -6,7 +6,7 @@ import type { CurrentUser } from "@/lib/auth/load-user";
 import { startOfYearMY, yearInMY } from "@/lib/format";
 import { awaitingActionWhere, visibleRequestsWhere } from "./queries";
 
-const OPEN = ["DRAFT", "PENDING_HOD", "PENDING_LND", "PENDING_HR", "RETURNED"] as const;
+const OPEN = ["DRAFT", "PENDING_HOD", "PENDING_BU", "PENDING_LND", "PENDING_HR", "RETURNED"] as const;
 
 // Always table-qualified: Drizzle omits the qualifier on single-table selects, and an
 // unqualified "id" inside this subquery would resolve to candidates.id.

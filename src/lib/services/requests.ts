@@ -37,7 +37,7 @@ import {
   type LndFieldsInput,
 } from "@/lib/validation/request";
 import { yearInMY } from "@/lib/format";
-import { NoDepartmentError, NoHodError, NotFoundError, ServiceError, StaleVersionError, ValidationFailedError } from "./errors";
+import { NoBuAdminError, NoDepartmentError, NoHodError, NotFoundError, ServiceError, StaleVersionError, ValidationFailedError } from "./errors";
 import { loadParties, roleHolderCounts } from "./parties";
 import { allocateRefNo } from "./ref-no";
 
@@ -202,9 +202,19 @@ export async function updateContent(user: CurrentUser, id: string, version: numb
   });
 }
 
+/** A request can only move towards the BU Admin step when its business unit has one. */
+async function assertBuAdmin(tx: Tx, businessUnitId: string | null) {
+  const { buAdmin } = await roleHolderCounts(tx, businessUnitId);
+  if (buAdmin > 0) return;
+  const [bu] = businessUnitId
+    ? await tx.select({ name: businessUnits.name }).from(businessUnits).where(eq(businessUnits.id, businessUnitId))
+    : [];
+  throw new NoBuAdminError(bu?.name ?? null);
+}
+
 export async function performAction(
   user: CurrentUser,
-  input: Pick<ActionSchemaInput, "requestId" | "version" | "type" | "remark" | "sendBackTo" | "notify">,
+  input: Pick<ActionSchemaInput, "requestId" | "version" | "type" | "remark">,
 ): Promise<{ status: TrainingRequest["status"]; refNo: string | null; version: number }> {
   let notifyArgs: NotifyArgs | null = null;
 
@@ -234,8 +244,10 @@ export async function performAction(
       businessUnitId = user.department.businessUnitId;
     }
 
-    const counts = await roleHolderCounts(tx);
-    const t = transition({ ...ref(r), departmentId, businessUnitId }, user.actor, input, counts);
+    if (isSubmit || (input.type === "APPROVE" && r.status === "PENDING_HOD")) await assertBuAdmin(tx, businessUnitId);
+
+    const counts = await roleHolderCounts(tx, businessUnitId);
+    const t = transition({ ...ref(r), departmentId, businessUnitId }, user.actor, { type: input.type, remark: input.remark }, counts);
     const now = new Date();
 
     let refNo = r.refNo;
@@ -383,7 +395,7 @@ export async function getRequestForUser(user: CurrentUser, id: string) {
     comments: cmts,
     attachments: atts,
     revisions,
-    counts: await roleHolderCounts(db),
+    counts: await roleHolderCounts(db, (request as TrainingRequest).businessUnitId),
   };
 }
 export type RequestDetail = NonNullable<Awaited<ReturnType<typeof getRequestForUser>>>;

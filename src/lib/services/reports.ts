@@ -68,7 +68,7 @@ export async function getReports(user: CurrentUser, { year }: { year: number }) 
         where ${submittedInYear}
       )
       select from_status as stage, round(avg(hours)::numeric, 1)::text as avg_hours, count(*)::text as n
-      from a where action in ('APPROVE','REJECT') and from_status in ('PENDING_HOD','PENDING_LND','PENDING_HR')
+      from a where action in ('APPROVE','REJECT') and from_status in ('PENDING_HOD','PENDING_BU','PENDING_LND','PENDING_HR')
       group by from_status
     `),
   ]);
@@ -89,7 +89,7 @@ export async function getReports(user: CurrentUser, { year }: { year: number }) 
 
   const statusCounts = Object.fromEntries(STATUSES.map((s) => [s, statusRows.find((r) => r.s === s)?.n ?? 0])) as Record<Status, number>;
   const stageRow = (s: string) => turnaroundRows.rows.find((r) => r.stage === s);
-  const turnaround = (["HOD", "LND", "HR"] as const).map((stage) => {
+  const turnaround = (["HOD", "BU", "LND", "HR"] as const).map((stage) => {
     const row = stageRow(`PENDING_${stage}`);
     return { stage, avgHours: row?.avg_hours ? Number(row.avg_hours) : null, decisions: Number(row?.n ?? 0) };
   });

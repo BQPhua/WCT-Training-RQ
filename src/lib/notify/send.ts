@@ -1,7 +1,7 @@
 import "server-only";
 import { and, eq, lt, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { notificationLogs, trainingRequests, users } from "@/db/schema";
+import { businessUnits, notificationLogs, trainingRequests, users } from "@/db/schema";
 import { env } from "@/lib/env";
 import type { NotifyArgs } from "@/lib/services/requests";
 import { buildPayload } from "./payload";
@@ -17,6 +17,9 @@ export async function notifyEvent(args: NotifyArgs): Promise<void> {
     if (!r) return;
     const [requester] = await db.select().from(users).where(eq(users.id, r.requesterId));
     const [actor] = await db.select().from(users).where(eq(users.id, args.event.actorId));
+    const [bu] = r.businessUnitId
+      ? await db.select({ name: businessUnits.name }).from(businessUnits).where(eq(businessUnits.id, r.businessUnitId))
+      : [];
     const payload = buildPayload({
       event: args.event,
       request: r,
@@ -24,6 +27,7 @@ export async function notifyEvent(args: NotifyArgs): Promise<void> {
       actor: actor ?? requester,
       recipients: args.recipients,
       remark: args.remark,
+      businessUnit: bu?.name ?? null,
     });
     const [log] = await db
       .insert(notificationLogs)

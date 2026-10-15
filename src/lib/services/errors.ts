@@ -23,6 +23,12 @@ export class StaleVersionError extends ServiceError {
   }
 }
 
+export class NoBuAdminError extends ServiceError {
+  constructor(businessUnit: string | null) {
+    super(`Your business unit (${businessUnit ?? "unknown"}) has no BU Admin assigned. Please contact HR.`, 422);
+  }
+}
+
 export class NoHodError extends ServiceError {
   constructor() {
     super("Your department has no HOD assigned. Please contact HR.", 422);

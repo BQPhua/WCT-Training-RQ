@@ -1,7 +1,7 @@
 import type { RequestDetail } from "@/lib/services/requests";
 import type { PdfData } from "./types";
 
-const STAGE: Record<string, string> = { PENDING_HOD: "Department HOD", PENDING_LND: "L&D Team", PENDING_HR: "HR Head" };
+const STAGE: Record<string, string> = { PENDING_HOD: "Department HOD", PENDING_BU: "BU Admin", PENDING_LND: "L&D Team", PENDING_HR: "HR Head" };
 
 export function pdfDataFromDetail(d: RequestDetail): PdfData {
   const r = d.request;

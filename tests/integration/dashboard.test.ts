@@ -38,7 +38,7 @@ describe("getDashboard", () => {
 
   it("sums approved fees for the year in the user's scope", async () => {
     const id = await submitAs("requester@demo.wct.my");
-    for (const [email, v] of [["hod.land@demo.wct.my", 2], ["lnd1@demo.wct.my", 3], ["hrhead@demo.wct.my", 4]] as const) {
+    for (const [email, v] of [["hod.land@demo.wct.my", 2], ["buadmin.land@demo.wct.my", 3], ["lnd1@demo.wct.my", 4], ["hrhead@demo.wct.my", 5]] as const) {
       await performAction(await asUser(email), { requestId: id, version: v, type: "APPROVE" });
     }
     const d = await getDashboard(await asUser("hrhead@demo.wct.my"));

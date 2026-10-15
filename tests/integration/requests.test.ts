@@ -1,9 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
-import { departments, requestActions, requestRevisions, trainingRequests, users } from "@/db/schema";
+import { businessUnitAdmins, departments, requestActions, requestRevisions, trainingRequests, users } from "@/db/schema";
 import { seed } from "@/db/seed";
 import {
+  NoBuAdminError,
   NoDepartmentError,
   NotFoundError,
   NoHodError,
@@ -52,19 +53,20 @@ async function submitted() {
 }
 
 describe("happy path", () => {
-  it("goes DRAFT → HOD → L&D → HR → APPROVED with ref no and audit trail", async () => {
+  it("goes DRAFT → HOD → BU Admin → L&D → HR → APPROVED with ref no and audit trail", async () => {
     const id = await submitted();
-    await act("hod.land@demo.wct.my", id, { type: "APPROVE" });
+    expect((await act("hod.land@demo.wct.my", id, { type: "APPROVE" })).status).toBe("PENDING_BU");
+    expect((await act("buadmin.land@demo.wct.my", id, { type: "APPROVE" })).status).toBe("PENDING_LND");
     await act("lnd1@demo.wct.my", id, { type: "APPROVE", remark: "HRDC claimable" });
     const res = await act("hrhead@demo.wct.my", id, { type: "APPROVE" });
 
     expect(res.status).toBe("APPROVED");
     expect(res.refNo).toBe(`TRQ-${year}-0001`);
     const actions = await db.select().from(requestActions).where(eq(requestActions.requestId, id));
-    expect(actions.map((a) => a.action)).toEqual(["CREATE", "SUBMIT", "APPROVE", "APPROVE", "APPROVE"]);
+    expect(actions.map((a) => a.action)).toEqual(["CREATE", "SUBMIT", "APPROVE", "APPROVE", "APPROVE", "APPROVE"]);
     const [row] = await db.select().from(trainingRequests).where(eq(trainingRequests.id, id));
     expect(row.finalisedAt).not.toBeNull();
-    expect(notifier).toHaveBeenCalledTimes(4);
+    expect(notifier).toHaveBeenCalledTimes(5);
   });
 
   it("allocates sequential ref numbers", async () => {
@@ -74,7 +76,7 @@ describe("happy path", () => {
     expect(r.refNo).toBe(`TRQ-${year}-0002`);
   });
 
-  it("records notified recipients on the action, including BU Admin on HOD approval", async () => {
+  it("records notified recipients on the action, BU Admin on HOD approval", async () => {
     const id = await submitted();
     await act("hod.land@demo.wct.my", id, { type: "APPROVE" });
     const actions = await db.select().from(requestActions).where(eq(requestActions.requestId, id));
@@ -83,15 +85,74 @@ describe("happy path", () => {
   });
 });
 
-describe("send back", () => {
-  it("HR sends back to L&D, L&D re-approves to HR", async () => {
+describe("BU Admin step and rejection", () => {
+  const ccOf = (call: number) => (notifier.mock.calls[call] as unknown as [{ recipients: { to: { email: string }[]; cc: { email: string }[] } }])[0].recipients;
+
+  it("submit is blocked when the business unit has no BU Admin", async () => {
+    await db.delete(businessUnitAdmins);
+    const req = await asUser("requester@demo.wct.my");
+    const { id } = await createDraft(req, validDraft);
+    await expect(act("requester@demo.wct.my", id, { type: "SUBMIT" })).rejects.toBeInstanceOf(NoBuAdminError);
+    await expect(act("requester@demo.wct.my", id, { type: "SUBMIT" })).rejects.toThrow(
+      "Your business unit (Land) has no BU Admin assigned. Please contact HR.",
+    );
+  });
+
+  it("HOD approval is blocked after the unit's only BU Admin is deactivated", async () => {
+    const id = await submitted();
+    await db.update(users).set({ isActive: false }).where(eq(users.email, "buadmin.land@demo.wct.my"));
+    await expect(act("hod.land@demo.wct.my", id, { type: "APPROVE" })).rejects.toBeInstanceOf(NoBuAdminError);
+  });
+
+  it("BU Admin rejects → RETURNED; requester emailed, HOD copied", async () => {
     const id = await submitted();
     await act("hod.land@demo.wct.my", id, { type: "APPROVE" });
+    notifier.mockClear();
+    const r = await act("buadmin.land@demo.wct.my", id, { type: "REJECT", remark: "Budget not in BU plan" });
+    expect(r.status).toBe("RETURNED");
+    const rc = ccOf(0);
+    expect(rc.to.map((p) => p.email)).toEqual(["requester@demo.wct.my"]);
+    expect(rc.cc.map((p) => p.email)).toEqual(["hod.land@demo.wct.my"]);
+  });
+
+  it("HR rejection after a full round copies HOD, BU Admin and the L&D approver", async () => {
+    const id = await submitted();
+    await act("hod.land@demo.wct.my", id, { type: "APPROVE" });
+    await act("buadmin.land@demo.wct.my", id, { type: "APPROVE" });
     await act("lnd1@demo.wct.my", id, { type: "APPROVE" });
-    const r1 = await act("hrhead@demo.wct.my", id, { type: "REJECT", remark: "Check vendor quote", sendBackTo: "LND" });
-    expect(r1.status).toBe("PENDING_LND");
-    const r2 = await act("lnd2@demo.wct.my", id, { type: "APPROVE" });
-    expect(r2.status).toBe("PENDING_HR");
+    notifier.mockClear();
+    const r = await act("hrhead@demo.wct.my", id, { type: "REJECT", remark: "Check vendor quote", sendBackTo: "LND" });
+    expect(r.status).toBe("RETURNED");
+    expect(ccOf(0).cc.map((p) => p.email).sort()).toEqual(["buadmin.land@demo.wct.my", "hod.land@demo.wct.my", "lnd1@demo.wct.my"]);
+    const [a] = await db.select().from(requestActions).where(eq(requestActions.action, "REJECT"));
+    expect(a.sentBackTo).toBe("REQUESTER");
+  });
+
+  it("only this round's approvers are copied after a resubmit", async () => {
+    const id = await submitted();
+    await act("hod.land@demo.wct.my", id, { type: "APPROVE" });
+    await act("buadmin.land@demo.wct.my", id, { type: "REJECT", remark: "Budget not in BU plan" });
+    await act("requester@demo.wct.my", id, { type: "RESUBMIT" });
+    notifier.mockClear();
+    await act("hod.land@demo.wct.my", id, { type: "REJECT", remark: "Wrong dates" });
+    expect(ccOf(0).cc).toEqual([]);
+  });
+
+  it("HOD approval emails the BU Admin; BU approval emails L&D", async () => {
+    const id = await submitted();
+    notifier.mockClear();
+    await act("hod.land@demo.wct.my", id, { type: "APPROVE" });
+    expect(ccOf(0).to.map((p) => p.email)).toEqual(["buadmin.land@demo.wct.my"]);
+    await act("buadmin.land@demo.wct.my", id, { type: "APPROVE" });
+    expect(ccOf(1).to.map((p) => p.email).sort()).toEqual(["lnd1@demo.wct.my", "lnd2@demo.wct.my"]);
+  });
+
+  it("the BU Admin's awaiting-action list contains the PENDING_BU request", async () => {
+    const id = await submitted();
+    await act("hod.land@demo.wct.my", id, { type: "APPROVE" });
+    const bua = await asUser("buadmin.land@demo.wct.my");
+    const rows = await db.select({ id: trainingRequests.id }).from(trainingRequests).where(await awaitingActionWhere(bua));
+    expect(rows.map((r) => r.id)).toContain(id);
   });
 
   it("returned request is edited and resubmitted as revision 2, restarting at HOD", async () => {
@@ -117,6 +178,7 @@ describe("concurrency", () => {
   it("second approver with the same version gets StaleVersionError naming the first", async () => {
     const id = await submitted();
     await act("hod.land@demo.wct.my", id, { type: "APPROVE" });
+    await act("buadmin.land@demo.wct.my", id, { type: "APPROVE" });
     const v = await versionOf(id);
     const [a, b] = [await asUser("lnd1@demo.wct.my"), await asUser("lnd2@demo.wct.my")];
     const results = await Promise.allSettled([
@@ -130,7 +192,7 @@ describe("concurrency", () => {
     const approvals = (await db.select().from(requestActions).where(eq(requestActions.requestId, id))).filter(
       (x) => x.action === "APPROVE",
     );
-    expect(approvals).toHaveLength(2); // HOD + one L&D
+    expect(approvals).toHaveLength(3); // HOD + BU Admin + one L&D
   });
 
   it("ten parallel ref allocations are distinct", async () => {
@@ -199,6 +261,8 @@ describe("L&D fields, comments, clone", () => {
     const lnd = await asUser("lnd1@demo.wct.my");
     await expect(updateLndFields(lnd, id, await versionOf(id), { hrdcClaimable: true })).rejects.toBeInstanceOf(WorkflowError);
     await act("hod.land@demo.wct.my", id, { type: "APPROVE" });
+    await expect(updateLndFields(lnd, id, await versionOf(id), { hrdcClaimable: true })).rejects.toBeInstanceOf(WorkflowError);
+    await act("buadmin.land@demo.wct.my", id, { type: "APPROVE" });
     await updateLndFields(lnd, id, await versionOf(id), { hrdcClaimable: true, hrdcGrantNo: "HRDC-2026-55" });
     const [r] = await db.select().from(trainingRequests).where(eq(trainingRequests.id, id));
     expect(r.hrdcGrantNo).toBe("HRDC-2026-55");

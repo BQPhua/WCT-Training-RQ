@@ -1,6 +1,6 @@
 import { env } from "@/lib/env";
 import { formatDateRange } from "@/lib/format";
-import { EVENT_LABEL, STAGE_LABEL, STATUS_LABEL, type Person, type Status, type WorkflowEvent } from "@/lib/workflow";
+import { EVENT_LABEL, STATUS_LABEL, type Person, type Status, type WorkflowEvent } from "@/lib/workflow";
 
 export interface NotificationPayload {
   event: WorkflowEvent["kind"];
@@ -25,6 +25,8 @@ export interface PayloadInput {
   actor: Person;
   recipients: { to: Person[]; cc: Person[] };
   remark?: string | null;
+  /** Business unit name (Land, E&C, Malls) for BU Admin wording. */
+  businessUnit?: string | null;
 }
 
 export function escapeHtml(s: string): string {
@@ -32,23 +34,26 @@ export function escapeHtml(s: string): string {
 }
 
 function eventLabel(e: WorkflowEvent): string {
-  if (e.kind === "REJECTED" && e.sentBackTo) return `Rejected (sent back to ${STAGE_LABEL[e.sentBackTo]})`;
+  if (e.kind === "REJECTED") return "Rejected (returned to requester)";
   return EVENT_LABEL[e.kind];
 }
 
-function headline(e: WorkflowEvent, actor: string): string {
+function headline(e: WorkflowEvent, actor: string, bu: string | null | undefined): string {
+  const buAdmin = bu ? `${bu} BU Admin` : "BU Admin";
   switch (e.kind) {
     case "SUBMITTED":
     case "RESUBMITTED":
       return `${actor} has submitted a training request for your approval.`;
     case "HOD_APPROVED":
-      return `The Department HOD (${actor}) has approved this training request. It is now with the L&D Team for review.`;
+      return `The Department HOD (${actor}) has approved this training request. It is now with the ${buAdmin} for approval.`;
+    case "BU_APPROVED":
+      return `The ${buAdmin} (${actor}) has approved this training request. It is now with the L&D Team for review.`;
     case "LND_APPROVED":
       return `The L&D Team (${actor}) has reviewed and approved this training request. It now awaits HR Head final approval.`;
     case "FINAL_APPROVED":
       return `This training request has received final approval from the HR Head (${actor}).`;
     case "REJECTED":
-      return `${actor} has rejected this training request and sent it back to ${STAGE_LABEL[e.sentBackTo ?? "REQUESTER"]}.`;
+      return `${actor} has rejected this training request and returned it to the requester for amendment.`;
     case "CANCELLED":
       return `${actor} has cancelled this training request.`;
     case "COMMENTED":
@@ -65,7 +70,7 @@ export function buildPayload(i: PayloadInput): NotificationPayload {
     ["Reference", ref],
     ["Training", i.request.title],
     ["Requester", i.requester.name],
-    ["Date(s)", formatDateRange(i.request.startDate ?? null, i.request.endDate ?? null)],
+    ["Training Dates", formatDateRange(i.request.startDate ?? null, i.request.endDate ?? null)],
     ["Venue", i.request.venue ?? "—"],
     ["Status", STATUS_LABEL[i.request.status]],
   ];
@@ -84,7 +89,7 @@ export function buildPayload(i: PayloadInput): NotificationPayload {
     <div style="font-size:18px;font-weight:600;margin-top:4px">${escapeHtml(label)}</div>
   </div>
   <div style="border:1px solid #e2e8f0;border-top:0;padding:20px;border-radius:0 0 8px 8px">
-    <p style="margin:0 0 16px">${escapeHtml(headline(i.event, i.actor.name))}</p>
+    <p style="margin:0 0 16px">${escapeHtml(headline(i.event, i.actor.name, i.businessUnit))}</p>
     <table style="border-collapse:collapse;width:100%;font-size:14px">
       ${rows
         .map(

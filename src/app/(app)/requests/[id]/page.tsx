@@ -97,7 +97,7 @@ export default async function RequestDetailPage({ params, searchParams }: PagePr
         </PanelBody>
       </Panel>
 
-      <ActionPanel requestId={r.id} version={r.version} actions={actions} stageLabel={stage ? STAGE_LABEL[stage] : ""} buName={d.businessUnit?.name ?? null} />
+      <ActionPanel requestId={r.id} version={r.version} actions={actions} stageLabel={stage === "BU" && d.businessUnit ? `${d.businessUnit.name} BU Admin` : stage ? STAGE_LABEL[stage] : ""} />
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_380px] [&>*]:min-w-0">
         <div className="min-w-0 space-y-6">
