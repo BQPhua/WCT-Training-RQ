@@ -41,7 +41,7 @@ const TILE: Record<Tone, string> = {
 };
 
 const LEGEND: { tone: Tone; label: string }[] = [
-  { tone: "pending", label: "In approval" },
+  { tone: "pending", label: "In progress" },
   { tone: "returned", label: "Returned" },
   { tone: "approved", label: "Approved" },
   { tone: "cancelled", label: "Cancelled" },

@@ -60,7 +60,7 @@ export function RequestsTable({ rows, total, f, base, sp, emptyTitle, emptyText 
               <SortHead label="Ref no." col="refNo" f={f} base={base} sp={sp} className="w-36" />
               <SortHead label="Training" col="title" f={f} base={base} sp={sp} />
               <th scope="col" className="w-44 px-4 py-2.5 text-left font-medium">Requester</th>
-              <SortHead label="Dates" col="startDate" f={f} base={base} sp={sp} className="w-48" />
+              <SortHead label="Training Dates" col="startDate" f={f} base={base} sp={sp} className="w-48" />
               <th scope="col" className="w-32 px-4 py-2.5 text-right font-medium">Total fees</th>
               <th scope="col" className="w-40 px-4 py-2.5 text-left font-medium">Status</th>
               <SortHead label="Updated" col="updatedAt" f={f} base={base} sp={sp} className="hidden w-40 text-right 2xl:table-cell" />

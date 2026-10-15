@@ -9,7 +9,7 @@ import { BASE_PATH } from "@/lib/env";
 import { parseHistoryFilters, searchHistory } from "@/lib/services/history";
 import { orgOptions } from "@/lib/services/org";
 
-export const metadata = { title: "Training RQ history" };
+export const metadata = { title: "Training RQ History" };
 
 export default async function HistoryPage({ searchParams }: PageProps<"/history">) {
   const user = await requireUser();
@@ -20,7 +20,7 @@ export default async function HistoryPage({ searchParams }: PageProps<"/history"
   return (
     <>
       <PageHeader
-        title="Training RQ history"
+        title="Training RQ History"
         description="Every request you're allowed to see. Search by candidate to see one employee's training history."
         actions={
           <Button asChild variant="outline">

@@ -23,7 +23,7 @@ export default async function MyRequestsPage({ searchParams }: PageProps<"/my-re
         actions={
           <Button asChild variant="brand">
             <Link href="/requests/new">
-              <Plus /> New request
+              <Plus /> New Training Requisition
             </Link>
           </Button>
         }

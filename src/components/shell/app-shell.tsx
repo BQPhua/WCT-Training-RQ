@@ -107,7 +107,7 @@ export function AppShell({ user, nav, children }: { user: ShellUser; nav: NavPro
         <Link href="/dashboard" className="flex-1">
           <Wordmark />
         </Link>
-        <Button asChild variant="brand" size="icon-sm" aria-label="New request">
+        <Button asChild variant="brand" size="icon-sm" aria-label="New Training Requisition">
           <Link href="/requests/new">
             <Plus />
           </Link>

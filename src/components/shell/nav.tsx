@@ -1,25 +1,23 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, ClipboardCheck, FilePlus2, FolderClock, LayoutGrid, ListChecks, Settings2 } from "lucide-react";
+import { ClipboardCheck, FilePlus2, FolderClock, LayoutGrid, ListChecks, Settings2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface NavProps {
   approvals: number;
-  canReport: boolean;
   isAdmin: boolean;
   onNavigate?: () => void;
 }
 
-export function Nav({ approvals, canReport, isAdmin, onNavigate }: NavProps) {
+export function Nav({ approvals, isAdmin, onNavigate }: NavProps) {
   const pathname = usePathname();
   const items = [
     { href: "/dashboard", label: "Dashboard", icon: LayoutGrid },
-    { href: "/requests/new", label: "New request", icon: FilePlus2 },
+    { href: "/requests/new", label: "New Training Requisition", icon: FilePlus2 },
     { href: "/my-requests", label: "My requests", icon: ListChecks },
     { href: "/approvals", label: "Approvals", icon: ClipboardCheck, badge: approvals },
-    { href: "/history", label: "Training RQ history", icon: FolderClock },
-    ...(canReport ? [{ href: "/reports", label: "Reports", icon: BarChart3 }] : []),
+    { href: "/history", label: "Training RQ History", icon: FolderClock },
     ...(isAdmin ? [{ href: "/admin", label: "Admin settings", icon: Settings2 }] : []),
   ];
   return (

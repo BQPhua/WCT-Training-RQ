@@ -14,11 +14,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     ...(user.actor.buAdminBusinessUnitIds.length ? ["BU Admin"] : []),
     ...user.actor.roles.map((r) => ROLE_LABEL[r]),
   ];
-  const canReport = user.actor.roles.length > 0 || user.actor.buAdminBusinessUnitIds.length > 0;
   return (
     <AppShell
       user={{ name: user.name, email: user.email, jobTitle: user.jobTitle, department: user.department?.name ?? null, roles }}
-      nav={{ approvals, canReport, isAdmin: user.actor.roles.includes("SYS_ADMIN") }}
+      nav={{ approvals, isAdmin: user.actor.roles.includes("SYS_ADMIN") }}
     >
       {children}
     </AppShell>

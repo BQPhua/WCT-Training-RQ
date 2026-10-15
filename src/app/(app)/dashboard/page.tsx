@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowRight, Inbox, Plus } from "lucide-react";
+import { Analytics, analyticsYear } from "@/components/dashboard/analytics";
 import { AvailabilityBoard } from "@/components/dashboard/availability-board";
 import { StatusBadge } from "@/components/status";
 import { Button } from "@/components/ui/button";
@@ -14,6 +15,7 @@ import {
 } from "@/lib/format";
 import { yearInMY } from "@/lib/format";
 import { getDashboard } from "@/lib/services/dashboard";
+import { canSeeReports } from "@/lib/services/reports";
 
 export const metadata = { title: "Dashboard" };
 
@@ -110,7 +112,7 @@ export default async function DashboardPage({
         </div>
         <Button asChild variant="brand" size="lg">
           <Link href="/requests/new">
-            <Plus /> New training request
+            <Plus /> New Training Requisition
           </Link>
         </Button>
       </div>
@@ -274,6 +276,8 @@ export default async function DashboardPage({
           </Panel>
         </div>
       </div>
+
+      {canSeeReports(user) && <Analytics user={user} year={analyticsYear(sp.year)} />}
     </div>
   );
 }
