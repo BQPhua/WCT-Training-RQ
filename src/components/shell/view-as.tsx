@@ -84,7 +84,7 @@ export function ViewAsBanner({ name, roleLabel }: { name: string; roleLabel: str
     <div role="status" className="sticky top-0 z-40 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 bg-brand px-4 py-2 text-sm text-brand-fg lg:top-0">
       <Eye className="size-4 shrink-0" aria-hidden />
       <span>
-        Viewing as <b className="font-semibold">{name}</b> ({roleLabel})
+        Viewing as <b className="font-semibold">{name}</b> · {roleLabel}
       </span>
       <button
         type="button"
@@ -104,7 +104,7 @@ export function DemoBanner({ name, roleLabel }: { name: string; roleLabel: strin
     <div role="status" className="sticky top-0 z-40 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 bg-brand px-4 py-2 text-sm text-brand-fg">
       <Eye className="size-4 shrink-0" aria-hidden />
       <span>
-        Demo account: <b className="font-semibold">{name}</b> ({roleLabel}). You&apos;re seeing demo requests only.
+        Demo account: <b className="font-semibold">{name}</b> · {roleLabel}. You&apos;re seeing demo requests only.
       </span>
       <form action={`${BASE_PATH}/api/auth/logout`} method="post">
         <button

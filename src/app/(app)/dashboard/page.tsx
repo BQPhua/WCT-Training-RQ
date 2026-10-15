@@ -1,6 +1,10 @@
 import Link from "next/link";
 import { ArrowRight, Inbox, Plus } from "lucide-react";
-import { Analytics, analyticsYear } from "@/components/dashboard/analytics";
+import {
+  AnalyticsCharts,
+  AnalyticsToolbar,
+  analyticsYear,
+} from "@/components/dashboard/analytics";
 import { AvailabilityBoard } from "@/components/dashboard/availability-board";
 import { StatusBadge } from "@/components/status";
 import { Button } from "@/components/ui/button";
@@ -15,7 +19,7 @@ import {
 } from "@/lib/format";
 import { yearInMY } from "@/lib/format";
 import { getDashboard } from "@/lib/services/dashboard";
-import { canSeeReports } from "@/lib/services/reports";
+import { canSeeReports, getReports } from "@/lib/services/reports";
 
 export const metadata = { title: "Dashboard" };
 
@@ -46,6 +50,10 @@ export default async function DashboardPage({
   const d = await getDashboard(user);
   const sp = await searchParams;
   const year = yearInMY();
+  const aYear = analyticsYear(sp.year);
+  const reports = canSeeReports(user)
+    ? await getReports(user, { year: aYear })
+    : null;
   const today = new Intl.DateTimeFormat("en-GB", {
     timeZone: TIMEZONE,
     weekday: "long",
@@ -69,7 +77,14 @@ export default async function DashboardPage({
       timeZone: "UTC",
     }).format(new Date(`${iso}T00:00:00Z`));
 
-  const placards = [
+  // One overview bar: personal counters first, then the year's figures. Analytics users
+  // get the analytics totals for the selected year; others get their own approved totals.
+  const kpis: {
+    label: string;
+    value: string;
+    href: string;
+    strong?: boolean;
+  }[] = [
     {
       label: "Awaiting your action",
       value: String(d.awaitingMe),
@@ -81,16 +96,36 @@ export default async function DashboardPage({
       value: String(d.myOpen),
       href: "/my-requests",
     },
-    {
-      label: `Approved in ${year}`,
-      value: String(d.approvedThisYear),
-      href: `/history?status=APPROVED`,
-    },
-    {
-      label: `Approved spend ${year}`,
-      value: formatMYR(d.feesThisYear),
-      href: "/reports",
-    },
+    ...(reports
+      ? [
+          {
+            label: `Requests submitted ${aYear}`,
+            value: String(reports.totals.submitted),
+            href: "/history",
+          },
+          {
+            label: `Requests approved ${aYear}`,
+            value: String(reports.totals.approved),
+            href: "/history?status=APPROVED",
+          },
+          {
+            label: `Approved training spend ${aYear}`,
+            value: formatMYR(reports.totals.approvedFees),
+            href: "/history?status=APPROVED",
+          },
+        ]
+      : [
+          {
+            label: `Approved in ${year}`,
+            value: String(d.approvedThisYear),
+            href: "/history?status=APPROVED",
+          },
+          {
+            label: `Approved spend ${year}`,
+            value: formatMYR(d.feesThisYear),
+            href: "/history?status=APPROVED",
+          },
+        ]),
   ];
 
   return (
@@ -117,47 +152,60 @@ export default async function DashboardPage({
         </Button>
       </div>
 
-      <Panel className="grid grid-cols-2 overflow-hidden lg:grid-cols-4">
-        {placards.map((p) => (
-          <Link
-            key={p.label}
-            href={p.href}
-            className="group border-line px-4 py-4 transition-colors hover:bg-surface-2 sm:px-5 [&:nth-child(even)]:border-l [&:nth-child(n+3)]:border-t lg:[&:nth-child(n+2)]:border-l lg:[&:nth-child(n+3)]:border-t-0"
-          >
-            <span className="block text-[12px] font-medium text-muted">
-              {p.label}
-            </span>
-            <span
-              className={`mt-1 flex items-baseline gap-2 whitespace-nowrap text-xl font-semibold tabular tracking-tight sm:text-2xl ${p.strong ? "text-brand-text" : "text-ink"}`}
+      <section
+        id="analytics"
+        aria-labelledby="overview-title"
+        className="scroll-mt-6 space-y-6"
+      >
+        {reports && (
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <h2
+                id="overview-title"
+                className="text-lg font-semibold tracking-tight"
+              >
+                Overview &amp; analytics
+              </h2>
+              <p className="mt-0.5 text-sm text-muted">{`${reports.scopeLabel} · ${aYear}`}</p>
+            </div>
+            <AnalyticsToolbar year={aYear} />
+          </div>
+        )}
+        {!reports && (
+          <h2 id="overview-title" className="sr-only">
+            Overview
+          </h2>
+        )}
+
+        <Panel
+          aria-label="Key figures"
+          role="region"
+          className={`grid grid-cols-2 gap-px overflow-hidden bg-line ${kpis.length === 5 ? "lg:grid-cols-5" : "lg:grid-cols-4"}`}
+        >
+          {kpis.map((p) => (
+            <Link
+              key={p.label}
+              href={p.href}
+              className={`group bg-surface px-4 py-4 transition-colors hover:bg-surface-2 sm:px-5 ${kpis.length === 5 ? "last:col-span-2 lg:last:col-span-1" : ""}`}
             >
-              {p.value}
-              <ArrowRight className="size-4 -translate-x-1 text-muted opacity-0 transition-all group-hover:translate-x-0 group-hover:opacity-100" />
-            </span>
-          </Link>
-        ))}
-      </Panel>
+              <span className="block text-[12px] font-medium text-muted">
+                {p.label}
+              </span>
+              <span
+                className={`mt-1 flex items-baseline gap-2 whitespace-nowrap text-xl font-semibold tabular tracking-tight sm:text-2xl ${p.strong ? "text-brand-text" : "text-ink"}`}
+              >
+                {p.value}
+                <ArrowRight className="size-4 -translate-x-1 text-muted opacity-0 transition-all group-hover:translate-x-0 group-hover:opacity-100" />
+              </span>
+            </Link>
+          ))}
+        </Panel>
+
+        {reports && <AnalyticsCharts r={reports} year={aYear} />}
+      </section>
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_380px] xl:items-start [&>*]:min-w-0">
         <div className="space-y-6">
-          <Panel>
-            <PanelHeader
-              title={`Availability board · ${year}`}
-              description="Every request you can see this year, one unit per request, one row per month. Select a unit to open it."
-            />
-            <PanelBody>
-              {d.board.length ? (
-                <AvailabilityBoard
-                  items={d.board}
-                  awaitingIds={d.awaitingIds}
-                />
-              ) : (
-                <EmptyState title="No requests yet this year">
-                  Submitted training requests will appear here as units on the
-                  board.
-                </EmptyState>
-              )}
-            </PanelBody>
-          </Panel>
           <Panel>
             <PanelHeader title="Recent activity" />
             {activity.length ? (
@@ -277,7 +325,22 @@ export default async function DashboardPage({
         </div>
       </div>
 
-      {canSeeReports(user) && <Analytics user={user} year={analyticsYear(sp.year)} />}
+      <Panel aria-label="Availability board" role="region">
+        <PanelHeader
+          title={`Availability board · ${year}`}
+          description="Every request you can see this year, one unit per request, one row per month. Select a unit to open it."
+        />
+        <PanelBody>
+          {d.board.length ? (
+            <AvailabilityBoard items={d.board} awaitingIds={d.awaitingIds} />
+          ) : (
+            <EmptyState title="No requests yet this year">
+              Submitted training requests will appear here as units on the
+              board.
+            </EmptyState>
+          )}
+        </PanelBody>
+      </Panel>
     </div>
   );
 }

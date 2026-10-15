@@ -25,20 +25,18 @@ Staff raise training requests, and approvals flow **Requester → Department HOD
   - **Export to Excel**.
 - **Print to PDF and Export to Excel** for each request. The PDF reproduces WCT-F-4.18-2 with the digital approval trail; requests that aren't fully approved carry a "NOT FINAL" watermark.
 - **Participants:** up to 8 typed names, or an Excel/CSV name list with a participant count for larger groups.
-- **View as demo user** (System Admin): walk through every role's screens using the `@demo.wct.my` accounts.
+- **Demo accounts on the sign-in page** (`DEMO_LOGIN=true`, stakeholder trial) and **View as demo user** (L&D / System Admin). Demo accounts only see demo requests; Admin settings are read-only for them.
 - **Drafts, clone, amend & resubmit,** with version history and changed fields highlighted.
-- **Candidate picker** that searches the M365 directory (up to 8 candidates), with manual entry as a fallback.
 - **Attachments** (brochures or quotations): type, size and content checks.
 - **HRD Corp claimable / grant no.,** recorded by L&D.
 - **Comments** on each request, with notifications.
 - **Analytics on the dashboard.** Monthly volume and spend, by business unit and department, planned vs ad hoc, and time spent at each approval stage, with Excel export.
 - **Admin settings.**
   - Business units and BU Admins.
-  - Departments and HODs.
-  - L&D, HR Head and System Admin roles.
+  - Head of Departments.
+  - L&D Team (full System Admin access), HR Head and System Admin roles.
   - Users.
   - Notification log with retry.
-  - Audit log.
 - **Usability.** Light and dark mode, mobile-friendly (approvers can act from a phone), WCAG AA colours, keyboard accessible.
 
 ## Architecture
@@ -69,7 +67,7 @@ npm run db:seed-demo            # optional: 10–20 demo requests over 5 months,
 npm run dev                     # http://localhost:3010/WCT-Training-RQ
 ```
 
-With `AUTH_DEV_LOGIN=true` (development only, ignored in production), the sign-in page lists demo accounts. Set
+With `AUTH_DEV_LOGIN=true` (development only, ignored in production) or `DEMO_LOGIN=true` (any environment), the sign-in page lists the demo accounts. Set
 `POWER_AUTOMATE_FLOW_URL=http://localhost:3010/WCT-Training-RQ/api/dev/flow-sink` to capture notifications locally (`GET` the same URL to inspect them).
 
 | Script | Purpose |
