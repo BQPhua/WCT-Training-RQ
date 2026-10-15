@@ -9,8 +9,8 @@ import { DEMO_EMAIL_DOMAIN, isDemoUser, isSystemAdmin } from "@/lib/auth/roles";
 /** Only seeded demo accounts can be viewed; never real staff. */
 export { DEMO_EMAIL_DOMAIN };
 const isDemo = (email: string) => isDemoUser({ email });
-/** Real L&D members and System Admins; a demo account just signs out and picks another. */
-const isAdmin = (u: CurrentUser) => isSystemAdmin(u) && !isDemoUser(u);
+/** L&D members and System Admins (they only ever reach demo accounts). */
+const isAdmin = (u: CurrentUser) => isSystemAdmin(u);
 
 /** Human label for what a user can do, e.g. "Department HOD · HR Head". */
 export function roleLabelOf(u: CurrentUser): string {
@@ -60,4 +60,11 @@ export async function startViewAs(real: CurrentUser, targetId: string): Promise<
 
 export async function stopViewAs(real: CurrentUser): Promise<void> {
   await db.insert(adminAuditLogs).values({ actorId: real.id, entity: "user", entityId: real.id, change: { op: "view-as-stop" } });
+}
+
+/** Demo sign-in (sign-in page, behind DEMO_LOGIN): only active demo accounts, never real staff. */
+export async function demoSignInTarget(userId: string): Promise<CurrentUser> {
+  const target = await loadCurrentUser(userId);
+  if (!target || !isDemo(target.email)) throw new ServiceError("Only demo accounts can be used here.", 403);
+  return target;
 }

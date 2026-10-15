@@ -104,3 +104,21 @@ describe("view as: demo accounts act on demo requests only", () => {
     expect(r.status).toBe("PENDING_BU");
   });
 });
+
+describe("demo sign-in from the sign-in page", () => {
+  it("signs in an active demo account", async () => {
+    const { demoSignInTarget } = await import("@/lib/services/view-as");
+    const u = await demoSignInTarget(await idOf("hrhead@demo.wct.my"));
+    expect(u.email).toBe("hrhead@demo.wct.my");
+  });
+
+  it("refuses real staff, inactive demo accounts and unknown ids", async () => {
+    const { demoSignInTarget } = await import("@/lib/services/view-as");
+    const [real] = await db.insert(users).values({ email: "real.person@wct.my", name: "Real Person" }).returning();
+    await expect(demoSignInTarget(real.id)).rejects.toThrow("Only demo accounts can be used here.");
+    const hod = await idOf("hod.land@demo.wct.my");
+    await db.update(users).set({ isActive: false }).where(eq(users.id, hod));
+    await expect(demoSignInTarget(hod)).rejects.toThrow("Only demo accounts can be used here.");
+    await expect(demoSignInTarget("not-a-uuid")).rejects.toThrow("Only demo accounts can be used here.");
+  });
+});

@@ -4,7 +4,7 @@ export async function signInAs(browser: Browser, email: string): Promise<Page> {
   const ctx = await browser.newContext();
   const page = await ctx.newPage();
   await page.goto("signin");
-  await page.locator(`button[value="${email}"]`).click();
+  await page.locator(`button[data-email="${email}"]`).click();
   await expect(page).toHaveURL(/\/dashboard/);
   return page;
 }

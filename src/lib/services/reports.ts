@@ -7,6 +7,7 @@ import { STATUSES, type Status } from "@/lib/workflow";
 import { startOfYearMY } from "@/lib/format";
 import { candidateCountSql } from "./dashboard";
 import { ServiceError } from "./errors";
+import { demoScopeWhere } from "./queries";
 
 export class ReportsForbiddenError extends ServiceError {
   constructor() {
@@ -24,7 +25,7 @@ const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "
 export async function getReports(user: CurrentUser, { year }: { year: number }) {
   if (!canSeeReports(user)) throw new ReportsForbiddenError();
   const fullScope = user.actor.roles.length > 0;
-  const scope: SQL = fullScope ? sql`true` : inArray(tr.businessUnitId, user.actor.buAdminBusinessUnitIds);
+  const scope: SQL = and(demoScopeWhere(user), fullScope ? sql`true` : inArray(tr.businessUnitId, user.actor.buAdminBusinessUnitIds))!;
   const start = startOfYearMY(year);
   const end = startOfYearMY(year + 1);
   const submittedInYear = and(scope, gte(tr.submittedAt, start), lt(tr.submittedAt, end))!;

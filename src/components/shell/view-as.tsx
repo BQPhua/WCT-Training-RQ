@@ -97,3 +97,23 @@ export function ViewAsBanner({ name, roleLabel }: { name: string; roleLabel: str
     </div>
   );
 }
+
+/** Shown to everyone signed in with a demo account from the sign-in page. */
+export function DemoBanner({ name, roleLabel }: { name: string; roleLabel: string }) {
+  return (
+    <div role="status" className="sticky top-0 z-40 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 bg-brand px-4 py-2 text-sm text-brand-fg">
+      <Eye className="size-4 shrink-0" aria-hidden />
+      <span>
+        Demo account: <b className="font-semibold">{name}</b> ({roleLabel}). You&apos;re seeing demo requests only.
+      </span>
+      <form action={`${BASE_PATH}/api/auth/logout`} method="post">
+        <button
+          type="submit"
+          className="inline-flex cursor-pointer items-center gap-1.5 rounded-md bg-brand-fg/10 px-2.5 py-1 font-medium hover:bg-brand-fg/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-fg"
+        >
+          <LogOut className="size-3.5" /> Switch account
+        </button>
+      </form>
+    </div>
+  );
+}

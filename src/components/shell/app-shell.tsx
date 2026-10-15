@@ -10,7 +10,7 @@ import { Menu, MenuContent, MenuItem, MenuLabel, MenuSeparator, MenuTrigger } fr
 import { Avatar } from "@/components/ui/misc";
 import { BASE_PATH } from "@/lib/env";
 import { Nav, type NavProps } from "./nav";
-import { ViewAsBanner, ViewAsDialog, type DemoAccount } from "./view-as";
+import { DemoBanner, ViewAsBanner, ViewAsDialog, type DemoAccount } from "./view-as";
 import { Wordmark } from "./wordmark";
 
 export interface ShellUser {
@@ -23,6 +23,8 @@ export interface ShellUser {
   demoAccounts?: DemoAccount[];
   /** Set while a System Admin is viewing as this demo user. */
   viewedAs?: { name: string; roleLabel: string } | null;
+  /** Set when signed in directly with a demo account (sign-in page demo list). */
+  demoSession?: { roleLabel: string } | null;
 }
 
 function UserMenu({ user }: { user: ShellUser }) {
@@ -102,6 +104,7 @@ export function AppShell({ user, nav, children }: { user: ShellUser; nav: NavPro
   return (
     <div className="min-h-dvh lg:pl-64">
       {user.viewedAs && <ViewAsBanner name={user.viewedAs.name} roleLabel={user.viewedAs.roleLabel} />}
+      {!user.viewedAs && user.demoSession && <DemoBanner name={user.name} roleLabel={user.demoSession.roleLabel} />}
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 bg-shell lg:block">
         <SidebarBody user={user} nav={nav} />
       </aside>

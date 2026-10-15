@@ -82,7 +82,7 @@ export function buildPayload(i: PayloadInput): NotificationPayload {
   const messageHtml = `
 <div style="font-family:Segoe UI,Arial,sans-serif;max-width:600px;color:#0f172a">
   <div style="background:#ffffff;padding:12px 20px;border:1px solid #e2e8f0;border-bottom:0;border-radius:8px 8px 0 0">
-    <img src="${env.APP_URL}/brand/wct-logo.png" alt="WCT" width="62" height="36" style="display:block;height:36px;width:62px;border:0">
+    <img src="${env.APP_URL}/brand/wct-logo.png" alt="WCT" width="59" height="36" style="display:block;height:36px;width:59px;border:0">
   </div>
   <div style="background:#1e3a5f;color:#fff;padding:16px 20px">
     <div style="font-size:12px;letter-spacing:.08em;opacity:.8">WCT HR FORMS · TRAINING RQ</div>

@@ -17,7 +17,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     ...user.actor.roles.map((r) => ROLE_LABEL[r]),
   ];
   const demo = isDemoUser(user);
-  const demoAccounts = !user.viewedBy && !demo && isSystemAdmin(user) ? await listDemoAccounts() : undefined;
+  const demoAccounts = !user.viewedBy && isSystemAdmin(user) ? await listDemoAccounts() : undefined;
   return (
     <AppShell
       user={{
@@ -28,6 +28,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         roles,
         demoAccounts,
         viewedAs: user.viewedBy ? { name: user.name, roleLabel: roleLabelOf(user) } : null,
+        demoSession: !user.viewedBy && demo ? { roleLabel: roleLabelOf(user) } : null,
       }}
       nav={{ approvals, isAdmin: isSystemAdmin(user) }}
     >
