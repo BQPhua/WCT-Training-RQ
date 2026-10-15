@@ -2,13 +2,13 @@ import type { TrackerStation } from "@/components/request-detail/progress-tracke
 import type { RequestDetail } from "./requests";
 
 /** Derive tracker stations from the request's status and its audit trail. */
-export function buildStations(d: RequestDetail, holders: { hod: string | null; hr: string | null }): TrackerStation[] {
+export function buildStations(d: RequestDetail, holders: { hod: string | null; bu?: string | null; hr: string | null }): TrackerStation[] {
   const s = d.request.status;
   const acts = d.actions;
   const lastOf = (pred: (a: (typeof acts)[number]) => boolean) => [...acts].reverse().find(pred);
   const submitted = lastOf((a) => a.action === "SUBMIT" || a.action === "RESUBMIT");
   const approvedFrom = (from: string) => lastOf((a) => a.action === "APPROVE" && a.fromStatus === from);
-  const order = ["PENDING_HOD", "PENDING_LND", "PENDING_HR", "APPROVED"];
+  const order = ["PENDING_HOD", "PENDING_BU", "PENDING_LND", "PENDING_HR", "APPROVED"];
   const pos = order.indexOf(s);
 
   const stage = (key: string, label: string, from: string, idx: number, holder: string | null): TrackerStation => {
@@ -36,8 +36,9 @@ export function buildStations(d: RequestDetail, holders: { hod: string | null; h
   return [
     first,
     stage("hod", "Department HOD", "PENDING_HOD", 0, holders.hod),
-    stage("lnd", "L&D review", "PENDING_LND", 1, "L&D Team"),
-    stage("hr", "HR Head", "PENDING_HR", 2, holders.hr),
+    stage("bu", "BU Admin", "PENDING_BU", 1, holders.bu ?? "BU Admin"),
+    stage("lnd", "L&D review", "PENDING_LND", 2, "L&D Team"),
+    stage("hr", "HR Head", "PENDING_HR", 3, holders.hr),
     last,
   ];
 }

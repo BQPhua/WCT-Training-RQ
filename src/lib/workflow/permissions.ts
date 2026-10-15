@@ -8,6 +8,8 @@ export function stageOf(status: Status): Stage | null {
       return "REQUESTER";
     case "PENDING_HOD":
       return "HOD";
+    case "PENDING_BU":
+      return "BU";
     case "PENDING_LND":
       return "LND";
     case "PENDING_HR":
@@ -24,6 +26,8 @@ export function holdsStage(req: RequestRef, actor: Actor, stage: Stage): boolean
       return actor.id === req.requesterId;
     case "HOD":
       return req.departmentId !== null && actor.hodDepartmentIds.includes(req.departmentId);
+    case "BU":
+      return req.businessUnitId !== null && actor.buAdminBusinessUnitIds.includes(req.businessUnitId);
     case "LND":
       return actor.roles.includes("LND");
     case "HR":

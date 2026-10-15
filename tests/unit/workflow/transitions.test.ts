@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { getAllowedActions, transition, WorkflowError, sendBackOptions } from "@/lib/workflow";
-import { admin, counts, hodLand, hodMalls, hr, lnd, req, requester, stranger, DEPT_LAND } from "./fixtures";
+import { getAllowedActions, transition, WorkflowError } from "@/lib/workflow";
+import { admin, buAdminLand, buAdminMalls, counts, hodLand, hodMalls, hr, lnd, req, requester, stranger, BU_LAND, DEPT_LAND } from "./fixtures";
 
 function code(fn: () => unknown): string | undefined {
   try {
@@ -29,9 +29,9 @@ describe("submit", () => {
 });
 
 describe("HOD stage", () => {
-  it("HOD of the request's department approves to PENDING_LND", () => {
+  it("HOD of the request's department approves to PENDING_BU", () => {
     const r = transition(req("PENDING_HOD"), hodLand, { type: "APPROVE" }, counts);
-    expect(r.toStatus).toBe("PENDING_LND");
+    expect(r.toStatus).toBe("PENDING_BU");
     expect(r.event.kind).toBe("HOD_APPROVED");
     expect(r.selfApproved).toBe(false);
   });
@@ -44,7 +44,7 @@ describe("HOD stage", () => {
     const formerHod = { ...hodLand, hodDepartmentIds: [] };
     const newHod = { ...hodMalls, hodDepartmentIds: [DEPT_LAND] };
     expect(code(() => transition(req("PENDING_HOD"), formerHod, { type: "APPROVE" }, counts))).toBe("FORBIDDEN");
-    expect(transition(req("PENDING_HOD"), newHod, { type: "APPROVE" }, counts).toStatus).toBe("PENDING_LND");
+    expect(transition(req("PENDING_HOD"), newHod, { type: "APPROVE" }, counts).toStatus).toBe("PENDING_BU");
   });
 
   it("reject requires a remark of at least 3 characters", () => {
@@ -64,36 +64,56 @@ describe("HOD stage", () => {
     expect(r.event.byStage).toBe("HOD");
   });
 
-  it("HOD cannot send back to L&D", () => {
-    expect(
-      code(() => transition(req("PENDING_HOD"), hodLand, { type: "REJECT", remark: "Not valid", sendBackTo: "LND" }, counts)),
-    ).toBe("INVALID_SEND_BACK");
+});
+
+describe("BU Admin stage", () => {
+  it("BU Admin of the request's business unit approves to PENDING_LND", () => {
+    const r = transition(req("PENDING_BU"), buAdminLand, { type: "APPROVE" }, counts);
+    expect(r.toStatus).toBe("PENDING_LND");
+    expect(r.event.kind).toBe("BU_APPROVED");
+    expect(r.selfApproved).toBe(false);
+  });
+
+  it("BU Admin of another business unit is forbidden", () => {
+    expect(code(() => transition(req("PENDING_BU"), buAdminMalls, { type: "APPROVE" }, counts))).toBe("FORBIDDEN");
+  });
+
+  it("HOD cannot act at the BU stage", () => {
+    expect(code(() => transition(req("PENDING_BU"), hodLand, { type: "APPROVE" }, counts))).toBe("FORBIDDEN");
+  });
+
+  it("sole BU Admin may approve own request (self-approved); blocked when another BU Admin exists", () => {
+    const self = { ...requester, buAdminBusinessUnitIds: [BU_LAND] };
+    expect(transition(req("PENDING_BU"), self, { type: "APPROVE" }, { ...counts, buAdmin: 1 }).selfApproved).toBe(true);
+    expect(code(() => transition(req("PENDING_BU"), self, { type: "APPROVE" }, { ...counts, buAdmin: 2 }))).toBe("FORBIDDEN");
+  });
+});
+
+describe("reject always returns to the requester", () => {
+  it.each([
+    ["PENDING_HOD", hodLand, "HOD"],
+    ["PENDING_BU", buAdminLand, "BU"],
+    ["PENDING_LND", lnd, "LND"],
+    ["PENDING_HR", hr, "HR"],
+  ] as const)("reject at %s → RETURNED", (status, actor, stage) => {
+    const r = transition(req(status), actor, { type: "REJECT", remark: "Please revise" }, counts);
+    expect(r.toStatus).toBe("RETURNED");
+    expect(r.event.kind).toBe("REJECTED");
+    expect(r.event.sentBackTo).toBe("REQUESTER");
+    expect(r.event.byStage).toBe(stage);
+  });
+
+  it("allowed REJECT carries no send-back options", () => {
+    const reject = getAllowedActions(req("PENDING_HR"), hr, counts).find((a) => a.type === "REJECT");
+    expect(reject).toEqual({ type: "REJECT" });
   });
 });
 
 describe("L&D stage", () => {
-  it("offers send back to requester or HOD", () => {
-    expect(sendBackOptions("PENDING_LND")).toEqual(["REQUESTER", "HOD"]);
-    const reject = getAllowedActions(req("PENDING_LND"), lnd, counts).find((a) => a.type === "REJECT");
-    expect(reject?.sendBackOptions).toEqual(["REQUESTER", "HOD"]);
-  });
-
   it("approve moves to PENDING_HR", () => {
     const r = transition(req("PENDING_LND"), lnd, { type: "APPROVE" }, counts);
     expect(r.toStatus).toBe("PENDING_HR");
     expect(r.event.kind).toBe("LND_APPROVED");
-  });
-
-  it("reject with send back to HOD returns to PENDING_HOD", () => {
-    const r = transition(
-      req("PENDING_LND"),
-      lnd,
-      { type: "REJECT", remark: "HOD to confirm budget", sendBackTo: "HOD", notify: ["REQUESTER"] },
-      counts,
-    );
-    expect(r.toStatus).toBe("PENDING_HOD");
-    expect(r.event.sentBackTo).toBe("HOD");
-    expect(r.event.notify).toEqual(["REQUESTER"]);
   });
 
   it("non-L&D user is forbidden", () => {
@@ -102,19 +122,6 @@ describe("L&D stage", () => {
 });
 
 describe("HR Head stage", () => {
-  it("offers send back to requester, HOD or L&D", () => {
-    expect(sendBackOptions("PENDING_HR")).toEqual(["REQUESTER", "HOD", "LND"]);
-  });
-
-  it.each([
-    ["REQUESTER", "RETURNED"],
-    ["HOD", "PENDING_HOD"],
-    ["LND", "PENDING_LND"],
-  ] as const)("reject sending back to %s → %s", (stage, status) => {
-    const r = transition(req("PENDING_HR"), hr, { type: "REJECT", remark: "Please revise", sendBackTo: stage }, counts);
-    expect(r.toStatus).toBe(status);
-  });
-
   it("approve is final", () => {
     const r = transition(req("PENDING_HR"), hr, { type: "APPROVE" }, counts);
     expect(r.toStatus).toBe("APPROVED");
@@ -133,7 +140,7 @@ describe("resubmit and cancel", () => {
     expect(r.event.kind).toBe("RESUBMITTED");
   });
 
-  it.each(["DRAFT", "PENDING_HOD", "PENDING_LND", "PENDING_HR", "RETURNED"] as const)(
+  it.each(["DRAFT", "PENDING_HOD", "PENDING_BU", "PENDING_LND", "PENDING_HR", "RETURNED"] as const)(
     "requester can cancel from %s with a remark",
     (status) => {
       const r = transition(req(status), requester, { type: "CANCEL", remark: "No longer needed" }, counts);
@@ -168,24 +175,24 @@ describe("self-approval rules", () => {
 
   it("L&D member cannot act on own request when another L&D member exists", () => {
     const self = { ...requester, roles: ["LND" as const] };
-    expect(getAllowedActions(req("PENDING_LND"), self, { lnd: 2, hrHead: 1 }).map((a) => a.type)).not.toContain(
+    expect(getAllowedActions(req("PENDING_LND"), self, { lnd: 2, hrHead: 1, buAdmin: 1 }).map((a) => a.type)).not.toContain(
       "APPROVE",
     );
-    expect(code(() => transition(req("PENDING_LND"), self, { type: "APPROVE" }, { lnd: 2, hrHead: 1 }))).toBe(
+    expect(code(() => transition(req("PENDING_LND"), self, { type: "APPROVE" }, { lnd: 2, hrHead: 1, buAdmin: 1 }))).toBe(
       "FORBIDDEN",
     );
   });
 
   it("sole L&D member may act on own request, flagged self-approved", () => {
     const self = { ...requester, roles: ["LND" as const] };
-    const r = transition(req("PENDING_LND"), self, { type: "APPROVE" }, { lnd: 1, hrHead: 1 });
+    const r = transition(req("PENDING_LND"), self, { type: "APPROVE" }, { lnd: 1, hrHead: 1, buAdmin: 1 });
     expect(r.selfApproved).toBe(true);
   });
 
   it("sole HR Head may approve own request; blocked when another HR Head exists", () => {
     const self = { ...requester, roles: ["HR_HEAD" as const] };
-    expect(transition(req("PENDING_HR"), self, { type: "APPROVE" }, { lnd: 2, hrHead: 1 }).selfApproved).toBe(true);
-    expect(code(() => transition(req("PENDING_HR"), self, { type: "APPROVE" }, { lnd: 2, hrHead: 2 }))).toBe(
+    expect(transition(req("PENDING_HR"), self, { type: "APPROVE" }, { lnd: 2, hrHead: 1, buAdmin: 1 }).selfApproved).toBe(true);
+    expect(code(() => transition(req("PENDING_HR"), self, { type: "APPROVE" }, { lnd: 2, hrHead: 2, buAdmin: 1 }))).toBe(
       "FORBIDDEN",
     );
   });
@@ -193,7 +200,7 @@ describe("self-approval rules", () => {
 
 describe("getAllowedActions", () => {
   it("system admin alone has no approval actions", () => {
-    for (const s of ["PENDING_HOD", "PENDING_LND", "PENDING_HR"] as const) {
+    for (const s of ["PENDING_HOD", "PENDING_BU", "PENDING_LND", "PENDING_HR"] as const) {
       expect(getAllowedActions(req(s), admin, counts)).toEqual([]);
     }
   });

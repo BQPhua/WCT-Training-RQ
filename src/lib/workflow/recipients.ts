@@ -7,6 +7,8 @@ function ownersOf(stage: Stage | null, p: Parties): Person[] {
       return [p.requester];
     case "HOD":
       return p.hod ? [p.hod] : [];
+    case "BU":
+      return p.buAdmins;
     case "LND":
       return p.lnd;
     case "HR":
@@ -29,7 +31,7 @@ function dedupe(people: Person[], exclude: Set<string> = new Set()): Person[] {
 }
 
 /**
- * Who should be emailed for a workflow event (spec §3.3).
+ * Who should be emailed for a workflow event (spec 2026-10-15 §1).
  * The actor is removed from `to`; anyone in `to` is removed from `cc`.
  */
 export function resolveRecipients(event: WorkflowEvent, p: Parties): { to: Person[]; cc: Person[] } {
@@ -43,7 +45,11 @@ export function resolveRecipients(event: WorkflowEvent, p: Parties): { to: Perso
       cc = [p.requester];
       break;
     case "HOD_APPROVED":
-      to = [...p.lnd, ...p.buAdmins];
+      to = p.buAdmins;
+      cc = [p.requester];
+      break;
+    case "BU_APPROVED":
+      to = p.lnd;
       cc = [p.requester];
       break;
     case "LND_APPROVED":
@@ -52,16 +58,15 @@ export function resolveRecipients(event: WorkflowEvent, p: Parties): { to: Perso
       break;
     case "FINAL_APPROVED":
       to = [p.requester];
-      cc = [...ownersOf("HOD", p), ...p.lnd, ...p.buAdmins];
+      cc = [...ownersOf("HOD", p), ...p.buAdmins, ...p.lnd];
       break;
-    case "REJECTED": {
-      const selected = (event.notify ?? []).flatMap((t) => ownersOf(t, p));
-      to = [...ownersOf(event.sentBackTo ?? "REQUESTER", p), ...selected, ...p.buAdmins];
+    case "REJECTED":
+      to = [p.requester];
+      cc = p.roundApprovers;
       break;
-    }
     case "CANCELLED":
       if (event.fromStatus === "DRAFT") break;
-      to = [...ownersOf(stageOf(event.fromStatus) === "REQUESTER" ? null : stageOf(event.fromStatus), p), ...p.buAdmins];
+      to = ownersOf(stageOf(event.fromStatus) === "REQUESTER" ? null : stageOf(event.fromStatus), p);
       break;
     case "COMMENTED":
       to = [p.requester, ...ownersOf(stageOf(event.fromStatus), p)];

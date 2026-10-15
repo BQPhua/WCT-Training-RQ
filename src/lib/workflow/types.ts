@@ -1,6 +1,7 @@
 export const STATUSES = [
   "DRAFT",
   "PENDING_HOD",
+  "PENDING_BU",
   "PENDING_LND",
   "PENDING_HR",
   "RETURNED",
@@ -10,9 +11,7 @@ export const STATUSES = [
 export type Status = (typeof STATUSES)[number];
 
 /** Who holds a request at a given point. */
-export type Stage = "REQUESTER" | "HOD" | "LND" | "HR";
-/** Parties a rejector may choose to notify. */
-export type NotifyTarget = "REQUESTER" | "HOD" | "LND";
+export type Stage = "REQUESTER" | "HOD" | "BU" | "LND" | "HR";
 export type RoleName = "LND" | "HR_HEAD" | "SYS_ADMIN";
 export type WorkflowActionType = "SUBMIT" | "RESUBMIT" | "APPROVE" | "REJECT" | "CANCEL";
 
@@ -36,24 +35,24 @@ export interface RequestRef {
 export interface RoleHolderCounts {
   lnd: number;
   hrHead: number;
+  /** Active BU Admins of the request's business unit. */
+  buAdmin: number;
 }
 
 export interface AllowedAction {
   type: WorkflowActionType;
-  sendBackOptions?: Stage[];
 }
 
 export interface ActionInput {
   type: WorkflowActionType;
   remark?: string;
-  sendBackTo?: Stage;
-  notify?: NotifyTarget[];
 }
 
 export type WorkflowEventKind =
   | "SUBMITTED"
   | "RESUBMITTED"
   | "HOD_APPROVED"
+  | "BU_APPROVED"
   | "LND_APPROVED"
   | "FINAL_APPROVED"
   | "REJECTED"
@@ -67,10 +66,8 @@ export interface WorkflowEvent {
   actorId: string;
   /** For REJECTED: the stage that rejected. */
   byStage?: Stage;
-  /** For REJECTED: where the request was sent back to. */
+  /** For REJECTED: always the requester (approval restarts at the HOD). */
   sentBackTo?: Stage;
-  /** For REJECTED: extra parties the rejector chose to notify. */
-  notify?: NotifyTarget[];
 }
 
 export interface TransitionResult {
@@ -92,15 +89,16 @@ export interface Parties {
   lnd: Person[];
   hrHeads: Person[];
   buAdmins: Person[];
+  /** Everyone who approved since the latest submit/resubmit (copied on a rejection). */
+  roundApprovers: Person[];
 }
 
-export type WorkflowErrorCode = "FORBIDDEN" | "INVALID_STATE" | "REMARK_REQUIRED" | "INVALID_SEND_BACK";
+export type WorkflowErrorCode = "FORBIDDEN" | "INVALID_STATE" | "REMARK_REQUIRED";
 
 const MESSAGES: Record<WorkflowErrorCode, string> = {
   FORBIDDEN: "You are not allowed to perform this action on this request.",
   INVALID_STATE: "This action is not available at the request's current status.",
   REMARK_REQUIRED: "Please provide a remark (at least 3 characters).",
-  INVALID_SEND_BACK: "That stage is not a valid send-back option.",
 };
 
 export class WorkflowError extends Error {
@@ -113,6 +111,7 @@ export class WorkflowError extends Error {
 export const STATUS_LABEL: Record<Status, string> = {
   DRAFT: "Draft",
   PENDING_HOD: "Pending HOD",
+  PENDING_BU: "Pending BU Admin",
   PENDING_LND: "Pending L&D",
   PENDING_HR: "Pending HR Head",
   RETURNED: "Returned",
@@ -123,6 +122,7 @@ export const STATUS_LABEL: Record<Status, string> = {
 export const STAGE_LABEL: Record<Stage, string> = {
   REQUESTER: "Requester",
   HOD: "Department HOD",
+  BU: "BU Admin",
   LND: "L&D Team",
   HR: "HR Head",
 };
@@ -131,6 +131,7 @@ export const EVENT_LABEL: Record<WorkflowEventKind, string> = {
   SUBMITTED: "Submitted for approval",
   RESUBMITTED: "Resubmitted for approval",
   HOD_APPROVED: "Approved by HOD",
+  BU_APPROVED: "Approved by BU Admin",
   LND_APPROVED: "Approved by L&D",
   FINAL_APPROVED: "Final approval",
   REJECTED: "Rejected",
