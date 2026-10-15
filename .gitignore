@@ -54,3 +54,4 @@ uploads/
 .next-failed/
 .next-prod/
 _pw.config.ts
+.test-uploads/
