@@ -202,7 +202,8 @@ Drafts may have neither.
   - L&D reject then resubmit
   - one request using a generated name list (`.xlsx` created with exceljs, attached as `NAME_LIST`)
 - Date spreading stays restricted to demo requests.
-- `demo-data-remove.sql` also removes attachment rows of demo requests (they cascade). Uploaded demo files live in `UPLOAD_DIR/<requestId>/`; the remove script deletes those folders.
+- `demo-data-remove.sql` also removes attachment rows of demo requests (they cascade). `demo-data.sh remove` first deletes the demo requests' stored files from `UPLOAD_DIR` by `stored_name`.
+- **Participant count source of truth.** On every save, `training_requests.participant_count` is set to the typed-name count, or to the entered number when a name list is attached. Totals everywhere read it, falling back to the candidate count for older rows where it is null.
 
 ## 8. Testing
 
