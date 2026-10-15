@@ -56,18 +56,19 @@ export async function loadParties(
       .where(and(eq(departments.id, req.departmentId), eq(users.isActive, true)));
     hod = h ?? null;
   }
-  const [buAdmins, lnd, hrHeads, roundApprovers] = await Promise.all([
-    buAdminsOf(tx, req.businessUnitId),
-    roleHolders(tx, "LND"),
-    roleHolders(tx, "HR_HEAD"),
-    roundApproversOf(tx, req.id),
-  ]);
+  // Sequential: these may run on one transaction connection, which can't take concurrent queries.
+  const buAdmins = await buAdminsOf(tx, req.businessUnitId);
+  const lnd = await roleHolders(tx, "LND");
+  const hrHeads = await roleHolders(tx, "HR_HEAD");
+  const roundApprovers = await roundApproversOf(tx, req.id);
   return { requester, hod, lnd, hrHeads, buAdmins, roundApprovers };
 }
 
 /** Active holders of each pooled role; `buAdmin` counts the given business unit's admins. */
 export async function roleHolderCounts(tx: Tx, businessUnitId: string | null = null): Promise<RoleHolderCounts> {
-  const [lnd, hr, bu] = await Promise.all([roleHolders(tx, "LND"), roleHolders(tx, "HR_HEAD"), buAdminsOf(tx, businessUnitId)]);
+  const lnd = await roleHolders(tx, "LND");
+  const hr = await roleHolders(tx, "HR_HEAD");
+  const bu = await buAdminsOf(tx, businessUnitId);
   return { lnd: lnd.length, hrHead: hr.length, buAdmin: bu.length };
 }
 
