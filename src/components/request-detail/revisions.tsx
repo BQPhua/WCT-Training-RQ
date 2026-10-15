@@ -7,20 +7,23 @@ const FIELDS: [string, string][] = [
   ["trainingType", "Type"],
   ["title", "Title"],
   ["objective", "Objective"],
-  ["startDate", "Start date"],
-  ["endDate", "End date"],
+  ["relevancy", "Relevancy"],
+  ["startDate", "Training start date"],
+  ["endDate", "Training end date"],
   ["startTime", "Start time"],
   ["endTime", "End time"],
   ["feePerPax", "Fee per pax"],
   ["venue", "Venue"],
   ["conductedBy", "Conducted by"],
   ["candidates", "Candidates"],
+  ["participantCount", "Participants"],
 ];
 
 function show(key: string, s: Snapshot): string {
   const v = s[key];
   if (key === "candidates") return (s.candidates ?? []).map((c) => c.name).join(", ");
   if (key === "feePerPax") return formatMYR(v as string);
+  if (key === "participantCount") return v ? String(v) : "—";
   if (key === "trainingType") return v === "PLANNED" ? "Planned" : v === "ADHOC" ? "Ad hoc" : "—";
   return (v as string) || "—";
 }

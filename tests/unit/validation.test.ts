@@ -5,6 +5,7 @@ const valid = {
   trainingType: "PLANNED",
   title: "Advanced Excel for Engineers",
   objective: "Improve reporting productivity",
+  relevancy: "The team prepares monthly progress reports in Excel.",
   startDate: "2026-11-02",
   endDate: "2026-11-03",
   startTime: "09:00",
@@ -13,11 +14,47 @@ const valid = {
   venue: "WCT Tower, Level 5",
   conductedBy: "ABC Training Sdn Bhd",
   candidates: [{ name: "Aisyah Rahman", email: "aisyah@wct.my" }],
+  hasNameList: false,
 };
 
 function errorPaths(result: { success: boolean; error?: { issues: { path: PropertyKey[]; message: string }[] } }) {
   return (result.error?.issues ?? []).map((i) => `${i.path.join(".")}: ${i.message}`);
 }
+
+describe("requestFormSchema: participants and relevancy", () => {
+  it("requires typed names or a name list", () => {
+    const r = requestFormSchema.safeParse({ ...valid, candidates: [] });
+    expect(errorPaths(r)).toContain("candidates: Add at least one candidate or attach a name list");
+  });
+
+  it("rejects typed names together with a name list", () => {
+    const r = requestFormSchema.safeParse({ ...valid, hasNameList: true, participantCount: 25 });
+    expect(errorPaths(r)).toContain("candidates: Remove the typed names when using a name list");
+  });
+
+  it("requires a participant count with a name list", () => {
+    const r = requestFormSchema.safeParse({ ...valid, candidates: [], hasNameList: true });
+    expect(errorPaths(r)).toContain("participantCount: Enter the number of participants on the name list");
+  });
+
+  it("accepts a name list with 25 participants", () => {
+    expect(requestFormSchema.safeParse({ ...valid, candidates: [], hasNameList: true, participantCount: 25 }).success).toBe(true);
+  });
+
+  it("accepts 3 typed names", () => {
+    expect(requestFormSchema.safeParse({ ...valid, candidates: [{ name: "A" }, { name: "B" }, { name: "C" }] }).success).toBe(true);
+  });
+
+  it("requires relevancy", () => {
+    const r = requestFormSchema.safeParse({ ...valid, relevancy: "  " });
+    expect(errorPaths(r)).toContain("relevancy: Relevancy is required");
+  });
+
+  it("drops staff no from candidates", () => {
+    const r = requestFormSchema.parse({ ...valid, candidates: [{ name: "A", staffNo: "W1" }] });
+    expect(r.candidates[0]).not.toHaveProperty("staffNo");
+  });
+});
 
 describe("requestFormSchema", () => {
   it("accepts a complete request", () => {
@@ -87,8 +124,8 @@ describe("draftSchema", () => {
 });
 
 describe("actionSchema", () => {
-  it("accepts a reject with send back and notify", () => {
-    const r = actionSchema.safeParse({
+  it("accepts a reject from an old client and strips send-back fields", () => {
+    const r = actionSchema.parse({
       requestId: "7d0f3c1e-1b2a-4c3d-8e9f-001122334455",
       version: 3,
       type: "REJECT",
@@ -96,7 +133,8 @@ describe("actionSchema", () => {
       sendBackTo: "HOD",
       notify: ["REQUESTER"],
     });
-    expect(r.success).toBe(true);
+    expect(r).not.toHaveProperty("sendBackTo");
+    expect(r).not.toHaveProperty("notify");
   });
 
   it("rejects an unknown action", () => {

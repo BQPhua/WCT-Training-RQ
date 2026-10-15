@@ -20,6 +20,11 @@ function fromCents(cents: number): string {
 }
 
 /** Fee per pax × candidate count, exact to the cent. */
+/** Participants for fee totals: the stored count, or the typed names for older rows without one. */
+export function effectiveParticipants(r: { participantCount: number | null }, candidateCount: number): number {
+  return r.participantCount ?? candidateCount;
+}
+
 export function totalFees(feePerPax: string | number | null | undefined, count: number): string {
   return fromCents(toCents(feePerPax) * count);
 }

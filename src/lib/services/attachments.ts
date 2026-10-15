@@ -2,13 +2,13 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import { mkdir, readFile, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { count, eq } from "drizzle-orm";
+import { and, count, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { attachments, trainingRequests, type Attachment } from "@/db/schema";
 import type { CurrentUser } from "@/lib/auth/load-user";
 import { env } from "@/lib/env";
 import { canEditContent, canView, type RequestRef } from "@/lib/workflow";
-import { ALLOWED_TYPES, extensionOf, sanitizeFilename, sniffOk, validateUpload } from "./attachment-rules";
+import { extensionOf, mimeTypeFor, sanitizeFilename, sniffOk, validateUpload, type AttachmentKind } from "./attachment-rules";
 import { NotFoundError, ServiceError } from "./errors";
 
 function storagePath(storedName: string) {
@@ -27,14 +27,18 @@ export async function saveAttachment(
   user: CurrentUser,
   requestId: string,
   file: { name: string; type: string; bytes: Uint8Array },
+  kind: AttachmentKind = "SUPPORTING",
 ): Promise<Attachment> {
   const r = await loadRequestRef(requestId);
   if (!r || !canView(r, user.actor)) throw new NotFoundError();
   if (!canEditContent(r, user.actor)) throw new ServiceError("Attachments can only be changed while the request is a draft or returned.", 403);
 
-  const [{ n }] = await db.select({ n: count() }).from(attachments).where(eq(attachments.requestId, requestId));
+  const [{ n }] = await db
+    .select({ n: count() })
+    .from(attachments)
+    .where(and(eq(attachments.requestId, requestId), eq(attachments.kind, "SUPPORTING")));
   const originalName = sanitizeFilename(file.name);
-  const problem = validateUpload({ name: originalName, size: file.bytes.byteLength }, n);
+  const problem = validateUpload({ name: originalName, size: file.bytes.byteLength }, n, kind);
   if (problem) throw new ServiceError(problem, 422);
   const ext = extensionOf(originalName);
   if (!sniffOk(ext, file.bytes)) throw new ServiceError("File content does not match its extension.", 422);
@@ -43,10 +47,19 @@ export async function saveAttachment(
   await mkdir(path.resolve(env.UPLOAD_DIR), { recursive: true });
   await writeFile(storagePath(storedName), file.bytes, { mode: 0o640 });
 
-  const [row] = await db
-    .insert(attachments)
-    .values({ requestId, originalName, storedName, mimeType: ALLOWED_TYPES[ext], sizeBytes: file.bytes.byteLength, uploadedById: user.id })
-    .returning();
+  // A request has at most one name list: a new upload replaces the previous one.
+  const previous =
+    kind === "NAME_LIST"
+      ? await db.select().from(attachments).where(and(eq(attachments.requestId, requestId), eq(attachments.kind, "NAME_LIST")))
+      : [];
+  const [row] = await db.transaction(async (tx) => {
+    for (const p of previous) await tx.delete(attachments).where(eq(attachments.id, p.id));
+    return tx
+      .insert(attachments)
+      .values({ requestId, kind, originalName, storedName, mimeType: mimeTypeFor(ext, kind), sizeBytes: file.bytes.byteLength, uploadedById: user.id })
+      .returning();
+  });
+  for (const p of previous) await unlink(storagePath(p.storedName)).catch(() => {});
   return row;
 }
 

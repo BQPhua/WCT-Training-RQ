@@ -27,6 +27,7 @@ export function formValuesFrom(detail: RequestDetail) {
       trainingType: (r.trainingType ?? "") as "" | "PLANNED" | "ADHOC",
       title: r.title,
       objective: r.objective ?? "",
+      relevancy: r.relevancy ?? "",
       startDate: r.startDate ?? "",
       endDate: r.endDate ?? "",
       startTime: r.startTime ?? "",
@@ -35,15 +36,14 @@ export function formValuesFrom(detail: RequestDetail) {
       venue: r.venue ?? "",
       conductedBy: r.conductedBy ?? "",
     },
-    initialCandidates: detail.candidates.map((c) => ({
-      name: c.name,
-      email: c.email ?? undefined,
-      jobTitle: c.jobTitle ?? undefined,
-      department: c.department ?? undefined,
-      staffNo: c.staffNo ?? undefined,
-      userId: c.userId ?? undefined,
-      manual: !c.email,
-    })),
-    initialAttachments: detail.attachments.map((a) => ({ id: a.id, originalName: a.originalName, sizeBytes: a.sizeBytes })),
+    initialCandidates: detail.candidates.map((c) => c.name),
+    initialParticipantCount: r.participantCount,
+    initialNameList: (() => {
+      const a = detail.attachments.find((x) => x.kind === "NAME_LIST");
+      return a ? { id: a.id, originalName: a.originalName, sizeBytes: a.sizeBytes } : null;
+    })(),
+    initialAttachments: detail.attachments
+      .filter((a) => a.kind !== "NAME_LIST")
+      .map((a) => ({ id: a.id, originalName: a.originalName, sizeBytes: a.sizeBytes })),
   };
 }

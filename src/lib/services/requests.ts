@@ -90,11 +90,23 @@ async function assertVersion(tx: Tx, r: TrainingRequest, version: number) {
   throw new StaleVersionError(last?.name ?? null);
 }
 
-function contentValues(d: DraftData) {
+/** Whether the request has a participant name list attached. */
+async function hasNameList(tx: Tx, requestId: string): Promise<boolean> {
+  const [row] = await tx
+    .select({ id: attachments.id })
+    .from(attachments)
+    .where(and(eq(attachments.requestId, requestId), eq(attachments.kind, "NAME_LIST")))
+    .limit(1);
+  return !!row;
+}
+
+function contentValues(d: DraftData, nameList: boolean) {
   return {
     trainingType: d.trainingType ?? null,
     title: d.title,
     objective: d.objective ?? null,
+    relevancy: d.relevancy ?? null,
+    participantCount: nameList ? (d.participantCount ?? null) : d.candidates.length || null,
     startDate: d.startDate ?? null,
     endDate: d.endDate ?? d.startDate ?? null,
     startTime: d.startTime ?? null,
@@ -116,7 +128,6 @@ async function replaceCandidates(tx: Tx, requestId: string, list: DraftData["can
         email: c.email ?? null,
         jobTitle: c.jobTitle ?? null,
         department: c.department ?? null,
-        staffNo: c.staffNo ?? null,
         userId: c.userId ?? null,
       })),
     );
@@ -133,6 +144,9 @@ async function loadContent(tx: Tx, r: TrainingRequest) {
     trainingType: r.trainingType ?? undefined,
     title: r.title,
     objective: r.objective ?? "",
+    relevancy: r.relevancy ?? "",
+    participantCount: r.participantCount,
+    hasNameList: await hasNameList(tx, r.id),
     startDate: r.startDate ?? "",
     endDate: r.endDate ?? "",
     startTime: r.startTime ?? "",
@@ -145,7 +159,6 @@ async function loadContent(tx: Tx, r: TrainingRequest) {
       email: c.email ?? undefined,
       jobTitle: c.jobTitle ?? undefined,
       department: c.department ?? undefined,
-      staffNo: c.staffNo ?? undefined,
       userId: c.userId ?? undefined,
     })),
   };
@@ -168,7 +181,7 @@ export async function createDraft(user: CurrentUser, data: DraftInput): Promise<
     const [row] = await tx
       .insert(trainingRequests)
       .values({
-        ...contentValues(d),
+        ...contentValues(d, false),
         requesterId: user.id,
         departmentId: user.departmentId,
         businessUnitId: user.businessUnit?.id ?? null,
@@ -190,7 +203,7 @@ export async function updateContent(user: CurrentUser, id: string, version: numb
     const [u] = await tx
       .update(trainingRequests)
       .set({
-        ...contentValues(d),
+        ...contentValues(d, await hasNameList(tx, id)),
         departmentId: user.departmentId,
         businessUnitId: user.businessUnit?.id ?? null,
         version: r.version + 1,
@@ -357,6 +370,8 @@ export async function cloneRequest(user: CurrentUser, id: string): Promise<{ id:
     trainingType: content.trainingType,
     title: content.title,
     objective: content.objective || undefined,
+    relevancy: content.relevancy || undefined,
+    participantCount: undefined, // the name list is not copied; the count follows the typed names
     startDate: content.startDate || undefined,
     endDate: content.endDate || undefined,
     startTime: content.startTime || undefined,
