@@ -10,7 +10,8 @@ const OPEN = ["DRAFT", "PENDING_HOD", "PENDING_BU", "PENDING_LND", "PENDING_HR",
 
 // Always table-qualified: Drizzle omits the qualifier on single-table selects, and an
 // unqualified "id" inside this subquery would resolve to candidates.id.
-export const candidateCountSql = sql<number>`(select count(*) from candidates c where c.request_id = ${sql.raw('"training_requests"."id"')})`;
+/** Participants for fee totals: the stored count (typed names or name list), else the typed names (older rows). */
+export const candidateCountSql = sql<number>`coalesce(${sql.raw('"training_requests"."participant_count"')}, (select count(*) from candidates c where c.request_id = ${sql.raw('"training_requests"."id"')}))`;
 
 export async function getDashboard(user: CurrentUser) {
   const yearStart = startOfYearMY(yearInMY());

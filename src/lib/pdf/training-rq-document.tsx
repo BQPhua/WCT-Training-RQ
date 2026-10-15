@@ -2,7 +2,7 @@ import React from "react";
 import fs from "node:fs";
 import path from "node:path";
 import { Document, Image, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
-import { formatDateMY, formatDateRange, formatDateTimeMY, formatMYR, formatTime12, totalFees } from "@/lib/format";
+import { effectiveParticipants, formatDateMY, formatDateRange, formatDateTimeMY, formatMYR, formatTime12, totalFees } from "@/lib/format";
 import { STATUS_LABEL } from "@/lib/workflow";
 import type { PdfData } from "./types";
 
@@ -79,7 +79,8 @@ function Check({ checked, label }: { checked: boolean; label: string }) {
 export function TrainingRqDocument({ d }: { d: PdfData }) {
   const slots = Array.from({ length: 8 }, (_, i) => d.candidates[i]);
   const extra = d.candidates.slice(8);
-  const total = totalFees(d.feePerPax, d.candidates.length);
+  const participants = effectiveParticipants(d, d.candidates.length);
+  const total = totalFees(d.feePerPax, participants);
   const hr = d.approvals.find((a) => a.stage === "HR Head" && a.decision === "Approved");
   const lnd = [...d.approvals].reverse().find((a) => a.stage === "L&D Team");
   const reviewComment = [d.lndRemarks, lnd?.remark, hr?.remark].filter(Boolean).join("\n");
@@ -121,7 +122,7 @@ export function TrainingRqDocument({ d }: { d: PdfData }) {
           </View>
           <View style={[s.row, { marginBottom: 0 }]}>
             <View style={s.col}>
-              <Text style={s.label}>FROM (REQUISITIONER):</Text>
+              <Text style={s.label}>FROM (REQUESTER):</Text>
               <Value>{d.requesterName}</Value>
             </View>
             <View style={s.col}>
@@ -149,9 +150,13 @@ export function TrainingRqDocument({ d }: { d: PdfData }) {
             <Text style={s.label}>OBJECTIVE:</Text>
             <Value>{d.objective}</Value>
           </View>
+          <View style={{ marginBottom: 6 }}>
+            <Text style={s.label}>RELEVANCY:</Text>
+            <Value>{d.relevancy}</Value>
+          </View>
           <View style={s.row}>
             <View style={s.col}>
-              <Text style={s.label}>DATE(S):</Text>
+              <Text style={s.label}>TRAINING DATES:</Text>
               <Value>{formatDateRange(d.startDate, d.endDate)}</Value>
             </View>
             <View style={s.col}>
@@ -161,7 +166,7 @@ export function TrainingRqDocument({ d }: { d: PdfData }) {
             <View style={s.col}>
               <Text style={s.label}>FEES (MYR):</Text>
               <Value>
-                {formatMYR(total)} ({d.candidates.length} × {formatMYR(d.feePerPax)})
+                {formatMYR(total)} ({participants} × {formatMYR(d.feePerPax)})
               </Value>
             </View>
           </View>
@@ -179,6 +184,11 @@ export function TrainingRqDocument({ d }: { d: PdfData }) {
 
         <View style={s.section} wrap={false}>
           <Text style={s.sectionTitle}>SECTION 3: PROPOSED CANDIDATES</Text>
+          {d.nameList ? (
+            <Text style={[s.value, { borderBottomWidth: 0 }]}>
+              Refer to attached name list: {d.nameList.fileName} ({participants} participants)
+            </Text>
+          ) : (
           <View style={s.table}>
             <View style={s.tr}>
               <Text style={[s.th, { width: 22 }]}>#</Text>
@@ -192,17 +202,18 @@ export function TrainingRqDocument({ d }: { d: PdfData }) {
                   <Text>{i + 1}</Text>
                 </View>
                 <View style={s.nameCell}>
-                  <Text>{slots[i] ? `${slots[i]!.name}${slots[i]!.staffNo ? ` (${slots[i]!.staffNo})` : ""}` : ""}</Text>
+                  <Text>{slots[i]?.name ?? ""}</Text>
                 </View>
                 <View style={s.numCell}>
                   <Text>{i + 5}</Text>
                 </View>
                 <View style={[s.nameCell, { borderRightWidth: 0 }]}>
-                  <Text>{slots[i + 4] ? `${slots[i + 4]!.name}${slots[i + 4]!.staffNo ? ` (${slots[i + 4]!.staffNo})` : ""}` : ""}</Text>
+                  <Text>{slots[i + 4]?.name ?? ""}</Text>
                 </View>
               </View>
             ))}
           </View>
+          )}
           {extra.length > 0 && <Text style={[s.small, { marginTop: 4 }]}>Additional: {extra.map((c) => c.name).join(", ")}</Text>}
         </View>
 

@@ -8,6 +8,9 @@ const base: PdfData = {
   trainingType: "PLANNED",
   title: "Advanced Contract Administration",
   objective: "Improve contract compliance on site.",
+  relevancy: "Site engineers administer PAM 2018 contracts daily.",
+  participantCount: 2,
+  nameList: null,
   startDate: "2026-11-02",
   endDate: "2026-11-03",
   startTime: "09:00",
@@ -19,9 +22,10 @@ const base: PdfData = {
   departmentName: "Land – Project Management",
   businessUnitName: "Land",
   submittedAt: new Date("2026-10-01T02:00:00Z"),
-  candidates: [{ name: "Aisyah Rahman" }, { name: "Ahmad Faiz", staffNo: "W1234" }],
+  candidates: [{ name: "Aisyah Rahman" }, { name: "Ahmad Faiz" }],
   approvals: [
     { stage: "Department HOD", name: "Tan Wei Ming", decision: "Approved", at: new Date("2026-10-02T02:00:00Z"), remark: null },
+    { stage: "BU Admin", name: "Lee Mei Ling", decision: "Approved", at: new Date("2026-10-02T06:00:00Z"), remark: null },
     { stage: "L&D Team", name: "Nurul Izzah", decision: "Approved", at: new Date("2026-10-03T02:00:00Z"), remark: "HRD Corp claimable" },
     { stage: "HR Head", name: "Farah Hanim", decision: "Approved", at: new Date("2026-10-04T02:00:00Z"), remark: null },
   ],
@@ -51,5 +55,25 @@ describe("renderRequestPdf", () => {
   it("watermarks requests that are not yet approved", async () => {
     const t = await text(await renderRequestPdf({ ...base, status: "PENDING_LND", approvals: base.approvals.slice(0, 1) }));
     expect(t).toContain("NOT FINAL");
+  }, 30000);
+
+  it("uses the new wording and shows relevancy and the BU Admin approval", async () => {
+    const t = await text(await renderRequestPdf(base));
+    for (const s of ["FROM (REQUESTER):", "TRAINING DATES:", "RELEVANCY:", "Site engineers administer PAM 2018 contracts daily.", "BU Admin", "Lee Mei Ling"]) {
+      expect(t).toContain(s);
+    }
+    expect(t).not.toContain("REQUISITIONER");
+    expect(t).not.toContain("DATE(S):");
+  }, 30000);
+
+  it("refers to the attached name list instead of listing candidates", async () => {
+    const t = await text(await renderRequestPdf({ ...base, candidates: [], participantCount: 25, nameList: { fileName: "names.xlsx" } }));
+    expect(t).toContain("Refer to attached name list: names.xlsx (25 participants)");
+    expect(t).toContain("36,250.00"); // 25 × RM 1,450.00
+  }, 30000);
+
+  it("renders older requests without relevancy or participant count", async () => {
+    const t = await text(await renderRequestPdf({ ...base, relevancy: null, participantCount: null }));
+    expect(t).toContain("2,900.00"); // falls back to 2 typed names
   }, 30000);
 });
