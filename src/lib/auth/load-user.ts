@@ -17,6 +17,8 @@ export type CurrentUser = User & {
   actor: Actor;
   department: Department | null;
   businessUnit: BusinessUnit | null;
+  /** Set when a System Admin is viewing the app as this (demo) user. */
+  viewedBy?: { id: string; name: string };
 };
 
 /** Loads a user plus everything the workflow needs to authorise them. */

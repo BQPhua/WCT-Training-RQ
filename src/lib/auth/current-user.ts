@@ -5,12 +5,20 @@ import { redirect } from "next/navigation";
 import { signinPath } from "./return-to";
 import { getSession, isSessionExpired } from "./session";
 import { loadCurrentUser, type CurrentUser } from "./load-user";
+import { resolveViewAs } from "@/lib/services/view-as";
 import type { RoleName } from "@/lib/workflow";
 
 export type { CurrentUser };
 
-/** Current signed-in user (memoised per request), or null. */
+/** Current user (memoised per request), or null. A System Admin "viewing as" a demo account gets that account. */
 export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
+  const session = await getSession();
+  if (!session.userId || isSessionExpired(session)) return null;
+  return resolveViewAs(session.userId, session.viewAsUserId);
+});
+
+/** The person actually signed in, ignoring "view as". */
+export const getSignedInUser = cache(async (): Promise<CurrentUser | null> => {
   const session = await getSession();
   if (!session.userId || isSessionExpired(session)) return null;
   return loadCurrentUser(session.userId);

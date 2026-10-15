@@ -2,7 +2,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { Dialog } from "radix-ui";
-import { LogOut, Menu as MenuIcon, Monitor, Moon, Plus, Sun } from "lucide-react";
+import { Eye, LogOut, Menu as MenuIcon, Monitor, Moon, Plus, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import { SheetContent } from "@/components/ui/dialog";
@@ -10,6 +10,7 @@ import { Menu, MenuContent, MenuItem, MenuLabel, MenuSeparator, MenuTrigger } fr
 import { Avatar } from "@/components/ui/misc";
 import { BASE_PATH } from "@/lib/env";
 import { Nav, type NavProps } from "./nav";
+import { ViewAsBanner, ViewAsDialog, type DemoAccount } from "./view-as";
 import { Wordmark } from "./wordmark";
 
 export interface ShellUser {
@@ -18,6 +19,10 @@ export interface ShellUser {
   jobTitle: string | null;
   department: string | null;
   roles: string[];
+  /** System Admin (not currently viewing as someone): demo accounts they can view as. */
+  demoAccounts?: DemoAccount[];
+  /** Set while a System Admin is viewing as this demo user. */
+  viewedAs?: { name: string; roleLabel: string } | null;
 }
 
 function UserMenu({ user }: { user: ShellUser }) {
@@ -25,9 +30,11 @@ function UserMenu({ user }: { user: ShellUser }) {
   // Kept outside the menu: the menu unmounts its items as soon as one is
   // selected, which would cancel a submit button placed inside it.
   const signOutForm = React.useRef<HTMLFormElement>(null);
+  const [viewAsOpen, setViewAsOpen] = React.useState(false);
   return (
     <>
     <form ref={signOutForm} action={`${BASE_PATH}/api/auth/logout`} method="post" hidden />
+    {user.demoAccounts && <ViewAsDialog open={viewAsOpen} onOpenChange={setViewAsOpen} accounts={user.demoAccounts} />}
     <Menu>
       <MenuTrigger className="flex w-full cursor-pointer items-center gap-3 rounded-lg p-2 text-left hover:bg-shell-2/60 outline-none focus-visible:ring-2 focus-visible:ring-brand">
         <Avatar name={user.name} />
@@ -58,6 +65,11 @@ function UserMenu({ user }: { user: ShellUser }) {
           );
         })}
         <MenuSeparator />
+        {user.demoAccounts && (
+          <MenuItem onSelect={() => setViewAsOpen(true)}>
+            <Eye /> View as demo user…
+          </MenuItem>
+        )}
         <MenuItem onSelect={() => signOutForm.current?.submit()}>
           <LogOut /> Sign out
         </MenuItem>
@@ -89,6 +101,7 @@ export function AppShell({ user, nav, children }: { user: ShellUser; nav: NavPro
   const [open, setOpen] = React.useState(false);
   return (
     <div className="min-h-dvh lg:pl-64">
+      {user.viewedAs && <ViewAsBanner name={user.viewedAs.name} roleLabel={user.viewedAs.roleLabel} />}
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 bg-shell lg:block">
         <SidebarBody user={user} nav={nav} />
       </aside>

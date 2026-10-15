@@ -1,6 +1,7 @@
 import { AppShell } from "@/components/shell/app-shell";
 import { requireUser } from "@/lib/auth/current-user";
 import { countAwaiting } from "@/lib/services/dashboard";
+import { listDemoAccounts, roleLabelOf } from "@/lib/services/view-as";
 
 export const dynamic = "force-dynamic";
 
@@ -14,9 +15,18 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     ...(user.actor.buAdminBusinessUnitIds.length ? ["BU Admin"] : []),
     ...user.actor.roles.map((r) => ROLE_LABEL[r]),
   ];
+  const demoAccounts = !user.viewedBy && user.actor.roles.includes("SYS_ADMIN") ? await listDemoAccounts() : undefined;
   return (
     <AppShell
-      user={{ name: user.name, email: user.email, jobTitle: user.jobTitle, department: user.department?.name ?? null, roles }}
+      user={{
+        name: user.name,
+        email: user.email,
+        jobTitle: user.jobTitle,
+        department: user.department?.name ?? null,
+        roles,
+        demoAccounts,
+        viewedAs: user.viewedBy ? { name: user.name, roleLabel: roleLabelOf(user) } : null,
+      }}
       nav={{ approvals, isAdmin: user.actor.roles.includes("SYS_ADMIN") }}
     >
       {children}
