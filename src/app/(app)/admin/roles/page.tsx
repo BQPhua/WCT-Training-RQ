@@ -7,14 +7,14 @@ import type { RoleName } from "@/lib/workflow";
 export const metadata = { title: "Admin · Roles" };
 
 const ROLES: { role: RoleName; title: string; description: string }[] = [
-  { role: "LND", title: "L&D Team", description: "Any member reviews requests after HOD approval and records HRD Corp details." },
+  { role: "LND", title: "L&D Team (System Admin)", description: "Any member reviews requests after the BU Admin, records HRD Corp details and manages these settings (full access)." },
   { role: "HR_HEAD", title: "HR Head", description: "Gives final approval. With more than one, any of them can act." },
-  { role: "SYS_ADMIN", title: "System Admins", description: "Manage these settings. Can't approve unless they also hold an approver role." },
+  { role: "SYS_ADMIN", title: "System Admins", description: "IT support access to these settings. Can't approve unless they also hold an approver role." },
 ];
 
 export default async function RolesPage() {
   const user = await requireUser();
-  const [o, users] = await Promise.all([adminOverview(user), userOptions()]);
+  const [o, users] = await Promise.all([adminOverview(user), userOptions(user)]);
   return (
     <div className="grid gap-6 lg:grid-cols-3">
       {ROLES.map((r) => (

@@ -8,7 +8,6 @@ const TABS = [
   ["/admin/roles", "Roles"],
   ["/admin/users", "Users"],
   ["/admin/notifications", "Notifications"],
-  ["/admin/audit", "Audit log"],
 ] as const;
 
 export function AdminNav() {

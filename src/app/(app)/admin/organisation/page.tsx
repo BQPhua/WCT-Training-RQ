@@ -8,7 +8,7 @@ export const metadata = { title: "Admin · Organisation" };
 
 export default async function OrganisationPage() {
   const user = await requireUser();
-  const [o, users] = await Promise.all([adminOverview(user), userOptions()]);
+  const [o, users] = await Promise.all([adminOverview(user), userOptions(user)]);
   return (
     <div className="space-y-6">
       <Panel>
@@ -29,7 +29,7 @@ export default async function OrganisationPage() {
       </Panel>
 
       <Panel className="overflow-hidden">
-        <PanelHeader title="Departments & HODs" actions={<DeptDialog bus={o.bus} users={users} />} />
+        <PanelHeader title="Head of Departments" actions={<DeptDialog bus={o.bus} users={users} />} />
         <div className="overflow-x-auto">
           <table className="w-full min-w-[640px] text-sm">
             <thead className="border-b border-line bg-surface-2 text-xs text-muted">

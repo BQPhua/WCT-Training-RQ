@@ -70,7 +70,7 @@ describe("view as demo user", () => {
     expect(label("requester@demo.wct.my")).toBe("Requester");
     expect(label("hod.land@demo.wct.my")).toBe("Department HOD");
     expect(label("buadmin.land@demo.wct.my")).toBe("BU Admin");
-    expect(label("lnd1@demo.wct.my")).toBe("L&D");
+    expect(label("lnd1@demo.wct.my")).toBe("L&D Team (System Admin)");
     expect(label("hrhead@demo.wct.my")).toBe("Department HOD · HR Head");
     expect(list.every((a) => a.email.endsWith("@demo.wct.my"))).toBe(true);
   });

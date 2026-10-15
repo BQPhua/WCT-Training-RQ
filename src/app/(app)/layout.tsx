@@ -1,11 +1,12 @@
 import { AppShell } from "@/components/shell/app-shell";
 import { requireUser } from "@/lib/auth/current-user";
+import { isDemoUser, isSystemAdmin } from "@/lib/auth/roles";
 import { countAwaiting } from "@/lib/services/dashboard";
 import { listDemoAccounts, roleLabelOf } from "@/lib/services/view-as";
 
 export const dynamic = "force-dynamic";
 
-const ROLE_LABEL = { LND: "L&D Team", HR_HEAD: "HR Head", SYS_ADMIN: "System Admin" } as const;
+const ROLE_LABEL = { LND: "L&D Team (System Admin)", HR_HEAD: "HR Head", SYS_ADMIN: "System Admin" } as const;
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await requireUser();
@@ -15,7 +16,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     ...(user.actor.buAdminBusinessUnitIds.length ? ["BU Admin"] : []),
     ...user.actor.roles.map((r) => ROLE_LABEL[r]),
   ];
-  const demoAccounts = !user.viewedBy && user.actor.roles.includes("SYS_ADMIN") ? await listDemoAccounts() : undefined;
+  const demo = isDemoUser(user);
+  const demoAccounts = !user.viewedBy && !demo && isSystemAdmin(user) ? await listDemoAccounts() : undefined;
   return (
     <AppShell
       user={{
@@ -27,7 +29,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         demoAccounts,
         viewedAs: user.viewedBy ? { name: user.name, roleLabel: roleLabelOf(user) } : null,
       }}
-      nav={{ approvals, isAdmin: user.actor.roles.includes("SYS_ADMIN") }}
+      nav={{ approvals, isAdmin: isSystemAdmin(user) }}
     >
       {children}
     </AppShell>
