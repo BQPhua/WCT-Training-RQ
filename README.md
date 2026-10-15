@@ -3,7 +3,7 @@
 Digital **Training Requisition Form (WCT-F-4.18-2 REV2)** for WCT Berhad, served at
 **https://hrforms.wct.my/WCT-Training-RQ/**.
 
-Staff raise training requests, and approvals flow **Requester → Department HOD → L&D Team → HR Head**. Every decision is made inside the app, Power Automate sends the email/Teams notifications, and HR keeps a searchable history with Excel export and a printable PDF that mirrors the paper form.
+Staff raise training requests, and approvals flow **Requester → Department HOD → BU Admin → L&D Team → HR Head**; any rejection returns the request to the requester, and resubmitting restarts at the HOD. Every decision is made inside the app, Power Automate sends the email/Teams notifications, and HR keeps a searchable history with Excel export and a printable PDF that mirrors the paper form.
 
 ![PDF preview](docs/pdf-preview.png)
 
@@ -19,17 +19,19 @@ Staff raise training requests, and approvals flow **Requester → Department HOD
   - A transit-style progress tracker on every request.
   - A full audit timeline: who did what, when, the remark, and who was notified.
   - A dashboard "availability board" showing every request of the year as colour-coded units.
-- **Training RQ history.**
+- **Training RQ History.**
   - Search by ref no., title, requester, provider or **candidate name**, so you can see one employee's training history.
   - Filters and pagination.
   - **Export to Excel**.
-- **Print to PDF.** Reproduces WCT-F-4.18-2 with the digital approval trail. Requests that aren't fully approved carry a "NOT FINAL" watermark.
+- **Print to PDF and Export to Excel** for each request. The PDF reproduces WCT-F-4.18-2 with the digital approval trail; requests that aren't fully approved carry a "NOT FINAL" watermark.
+- **Participants:** up to 8 typed names, or an Excel/CSV name list with a participant count for larger groups.
+- **View as demo user** (System Admin): walk through every role's screens using the `@demo.wct.my` accounts.
 - **Drafts, clone, amend & resubmit,** with version history and changed fields highlighted.
 - **Candidate picker** that searches the M365 directory (up to 8 candidates), with manual entry as a fallback.
 - **Attachments** (brochures or quotations): type, size and content checks.
 - **HRD Corp claimable / grant no.,** recorded by L&D.
 - **Comments** on each request, with notifications.
-- **Reports.** Monthly volume and spend, by business unit and department, planned vs ad hoc, and time spent at each approval stage, with Excel export.
+- **Analytics on the dashboard.** Monthly volume and spend, by business unit and department, planned vs ad hoc, and time spent at each approval stage, with Excel export.
 - **Admin settings.**
   - Business units and BU Admins.
   - Departments and HODs.
@@ -63,7 +65,7 @@ cp .env.example .env            # set DATABASE_URL, SESSION_SECRET, AUTH_DEV_LOG
 npm ci
 npm run db:migrate
 SEED_DEMO=true npm run db:seed  # business units + demo departments/users (@demo.wct.my)
-npm run db:seed-demo            # optional: ~30 demo requests in every status
+npm run db:seed-demo            # optional: 10–20 demo requests over 5 months, every status
 npm run dev                     # http://localhost:3010/WCT-Training-RQ
 ```
 
