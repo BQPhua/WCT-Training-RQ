@@ -2,6 +2,8 @@ import { expect, test } from "@playwright/test";
 import { decide, signInAs } from "./helpers";
 
 test("request → HOD → BU Admin → L&D rejects → resubmit → full approval → PDF + Excel → history", async ({ browser, request }) => {
+  // Five people act in turn; on a cold dev server (CI) each page compiles on first visit.
+  test.setTimeout(180_000);
   const title = `E2E Fire Warden Training ${Date.now()}`;
 
   // 1. Requester raises and submits (names typed by hand)
