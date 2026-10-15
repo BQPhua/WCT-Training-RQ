@@ -4,7 +4,7 @@ import { safeReturnTo } from "@/lib/auth/return-to";
 import { env, isDemoLoginEnabled } from "@/lib/env";
 import { isSameOrigin } from "@/lib/same-origin";
 import { ServiceError } from "@/lib/services/errors";
-import { demoSignInTarget } from "@/lib/services/view-as";
+import { demoSignInTarget, recordDemoSignIn } from "@/lib/services/view-as";
 
 /**
  * Sign in as a demo account from the sign-in page (stakeholder trial).
@@ -21,6 +21,7 @@ export async function POST(req: NextRequest) {
     delete session.viewAsUserId; // a new sign-in never inherits "view as"
     session.signedInAt = Date.now();
     await session.save();
+    await recordDemoSignIn(user, req.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? req.headers.get("x-real-ip"));
     return NextResponse.redirect(`${env.APP_URL}${safeReturnTo(String(form.get("returnTo") ?? ""))}`, { status: 303 });
   } catch (e) {
     if (e instanceof ServiceError) return NextResponse.redirect(`${env.APP_URL}/signin?error=demo_user`, { status: 303 });

@@ -23,6 +23,7 @@ Success means:
 |---|---|
 | Demo sign-in in production? | Yes, behind a server switch `DEMO_LOGIN=true` in `shared/.env`. Off by default. Turn it off at go-live. |
 | What can a demo account see? | Only requests raised by demo accounts. This applies everywhere: lists, dashboard, analytics, exports, request pages, files. Actions on real requests were already blocked; that now also holds for demo sign-in. |
+| Do demo and real staff mix in routing? (added after review) | No. A demo request is routed, notified and counted among demo accounts only; a real request among real staff only. Real approvers don't get demo requests in their inbox and can't act on them (they use "View as"). Real requests therefore need real BU Admins. The last-admin guard counts active real admins only. |
 | Admin settings for demo accounts | Read-only. Lists show demo accounts only. The notification log shows demo requests only. |
 | L&D "highest access" | L&D holders get everything System Admins have: Admin settings and "View as". `SYS_ADMIN` stays for IT/support. The last-admin guard counts L&D + System Admins. |
 | "Remove audit log" | The Admin settings page and tab are removed. Changes are still recorded in the database for security; only the screen goes. |

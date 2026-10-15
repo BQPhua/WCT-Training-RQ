@@ -50,6 +50,19 @@ describe("admin services", () => {
     await expect(revokeRole(lnd, lnd.id, "LND")).rejects.toThrow(/last system admin/i);
   });
 
+  it("demo admins don't count towards the last real admin, and the last one can't be deactivated", async () => {
+    const a = await admin(); // the only real admin; demo admins/L&D still exist
+    await expect(revokeRole(a, a.id, "SYS_ADMIN")).rejects.toThrow(/last system admin/i);
+    const lnd = await realLnd();
+    await expect(updateUser(lnd, a.id, { isActive: true })).resolves.toBeUndefined();
+    await revokeRole(a, lnd.id, "LND");
+    await db.insert(roleAssignments).values({ userId: lnd.id, role: "HR_HEAD" });
+    await expect(updateUser(a, a.id, { isActive: false })).rejects.toThrow(/yourself/i);
+    await db.insert(roleAssignments).values({ userId: lnd.id, role: "SYS_ADMIN" });
+    await revokeRole(lnd, a.id, "SYS_ADMIN");
+    await expect(updateUser(a, lnd.id, { isActive: false })).rejects.toThrow(/last system admin/i);
+  });
+
   it("gives the L&D team full admin access", async () => {
     const lnd = await realLnd();
     const bu = await upsertBusinessUnit(lnd, { code: "HOSP", name: "Hospitality", isActive: true });

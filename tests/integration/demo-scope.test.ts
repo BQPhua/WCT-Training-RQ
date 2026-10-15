@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
-import { departments, roleAssignments, trainingRequests, users } from "@/db/schema";
+import { businessUnitAdmins, departments, roleAssignments, trainingRequests, users } from "@/db/schema";
 import { seed } from "@/db/seed";
 import { readAttachment, saveAttachment } from "@/lib/services/attachments";
 import { getDashboard } from "@/lib/services/dashboard";
@@ -21,6 +21,9 @@ beforeEach(async () => {
 async function setup() {
   const [dept] = await db.select().from(departments).where(eq(departments.name, "Land – Project Management"));
   await db.insert(users).values({ email: "real.staff@wct.my", name: "Real Staff", departmentId: dept.id });
+  // Real requests route to real approvers only, so the real request needs a real BU Admin.
+  const [realBu] = await db.insert(users).values({ email: "real.buadmin@wct.my", name: "Real BU Admin" }).returning();
+  await db.insert(businessUnitAdmins).values({ businessUnitId: dept.businessUnitId, userId: realBu.id });
   const [admin] = await db.insert(users).values({ email: "it.admin@wct.my", name: "IT Admin" }).returning();
   await db.insert(roleAssignments).values({ userId: admin.id, role: "SYS_ADMIN" });
   const real = await asUser("real.staff@wct.my");
@@ -70,5 +73,27 @@ describe("demo accounts see demo requests only", () => {
     const { realId } = await setup();
     const hod = await asUser("hod.land@demo.wct.my");
     await expect(performAction(hod, { requestId: realId, version: 2, type: "APPROVE" })).rejects.toThrow(/demo requests/);
+  });
+
+  it("demo and real never mix in routing: notifications, inboxes and actions", async () => {
+    const sent: { to: string[]; cc: string[] }[] = [];
+    setNotifier(async (a) => {
+      sent.push({ to: a.recipients.to.map((p) => p.email), cc: a.recipients.cc.map((p) => p.email) });
+    });
+    const { realId, demoId } = await setup();
+    const [realLnd] = await db.insert(users).values({ email: "lnd.real@wct.my", name: "Real L&D" }).returning();
+    await db.insert(roleAssignments).values({ userId: realLnd.id, role: "LND" });
+    // Push the demo request to L&D: demo HOD → demo BU Admin.
+    await performAction(await asUser("hod.land@demo.wct.my"), { requestId: demoId, version: 2, type: "APPROVE" });
+    await performAction(await asUser("buadmin.land@demo.wct.my"), { requestId: demoId, version: 3, type: "APPROVE" });
+    const everyone = sent.flatMap((s) => [...s.to, ...s.cc]);
+    expect(everyone.filter((e) => !e.endsWith("@demo.wct.my"))).toEqual(["real.staff@wct.my"]); // only the real request's own requester
+    const lnd = await asUser("lnd.real@wct.my");
+    expect((await getDashboard(lnd)).awaitingIds).not.toContain(demoId);
+    await expect(performAction(lnd, { requestId: demoId, version: 4, type: "APPROVE" })).rejects.toThrow(/Demo requests can only be handled by demo accounts/);
+    // The real request's HOD step skips the demo HOD: nobody demo is notified about it.
+    const realMail = sent.filter((s) => [...s.to, ...s.cc].includes("real.staff@wct.my"));
+    expect(realMail.flatMap((s) => [...s.to, ...s.cc]).every((e) => !e.endsWith("@demo.wct.my"))).toBe(true);
+    expect(realId).toBeTruthy();
   });
 });

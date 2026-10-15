@@ -62,6 +62,11 @@ export async function stopViewAs(real: CurrentUser): Promise<void> {
   await db.insert(adminAuditLogs).values({ actorId: real.id, entity: "user", entityId: real.id, change: { op: "view-as-stop" } });
 }
 
+/** Each demo sign-in is recorded, so public use of the demo list leaves a trace. */
+export async function recordDemoSignIn(user: CurrentUser, ip: string | null): Promise<void> {
+  await db.insert(adminAuditLogs).values({ actorId: user.id, entity: "user", entityId: user.id, change: { op: "demo-sign-in", ip } });
+}
+
 /** Demo sign-in (sign-in page, behind DEMO_LOGIN): only active demo accounts, never real staff. */
 export async function demoSignInTarget(userId: string): Promise<CurrentUser> {
   const target = await loadCurrentUser(userId);

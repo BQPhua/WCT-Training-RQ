@@ -82,7 +82,8 @@ export default async function DashboardPage({
   const kpis: {
     label: string;
     value: string;
-    href: string;
+    /** Personal counters link to their lists; year figures are totals, not lists. */
+    href?: string;
     strong?: boolean;
   }[] = [
     {
@@ -101,29 +102,24 @@ export default async function DashboardPage({
           {
             label: `Requests submitted ${aYear}`,
             value: String(reports.totals.submitted),
-            href: "/history",
           },
           {
             label: `Requests approved ${aYear}`,
             value: String(reports.totals.approved),
-            href: "/history?status=APPROVED",
           },
           {
             label: `Approved training spend ${aYear}`,
             value: formatMYR(reports.totals.approvedFees),
-            href: "/history?status=APPROVED",
           },
         ]
       : [
           {
             label: `Approved in ${year}`,
             value: String(d.approvedThisYear),
-            href: "/history?status=APPROVED",
           },
           {
             label: `Approved spend ${year}`,
             value: formatMYR(d.feesThisYear),
-            href: "/history?status=APPROVED",
           },
         ]),
   ];
@@ -182,23 +178,37 @@ export default async function DashboardPage({
           role="region"
           className={`grid grid-cols-2 gap-px overflow-hidden bg-line ${kpis.length === 5 ? "lg:grid-cols-5" : "lg:grid-cols-4"}`}
         >
-          {kpis.map((p) => (
-            <Link
-              key={p.label}
-              href={p.href}
-              className={`group bg-surface px-4 py-4 transition-colors hover:bg-surface-2 sm:px-5 ${kpis.length === 5 ? "last:col-span-2 lg:last:col-span-1" : ""}`}
-            >
-              <span className="block text-[12px] font-medium text-muted">
-                {p.label}
-              </span>
-              <span
-                className={`mt-1 flex items-baseline gap-2 whitespace-nowrap text-xl font-semibold tabular tracking-tight sm:text-2xl ${p.strong ? "text-brand-text" : "text-ink"}`}
+          {kpis.map((p) => {
+            const tile = `group bg-surface px-4 py-4 sm:px-5 ${kpis.length === 5 ? "last:col-span-2 lg:last:col-span-1" : ""}`;
+            const body = (
+              <>
+                <span className="block text-[12px] font-medium text-muted">
+                  {p.label}
+                </span>
+                <span
+                  className={`mt-1 flex items-baseline gap-2 whitespace-nowrap text-xl font-semibold tabular tracking-tight sm:text-2xl ${p.strong ? "text-brand-text" : "text-ink"}`}
+                >
+                  {p.value}
+                  {p.href && (
+                    <ArrowRight className="size-4 -translate-x-1 text-muted opacity-0 transition-all group-hover:translate-x-0 group-hover:opacity-100" />
+                  )}
+                </span>
+              </>
+            );
+            return p.href ? (
+              <Link
+                key={p.label}
+                href={p.href}
+                className={`${tile} transition-colors hover:bg-surface-2`}
               >
-                {p.value}
-                <ArrowRight className="size-4 -translate-x-1 text-muted opacity-0 transition-all group-hover:translate-x-0 group-hover:opacity-100" />
-              </span>
-            </Link>
-          ))}
+                {body}
+              </Link>
+            ) : (
+              <div key={p.label} className={tile}>
+                {body}
+              </div>
+            );
+          })}
         </Panel>
 
         {reports && <AnalyticsCharts r={reports} year={aYear} />}

@@ -17,7 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { requireUser } from "@/lib/auth/current-user";
 import { BASE_PATH } from "@/lib/env";
 import { effectiveParticipants, formatDateRange, formatDateTimeMY, formatMYR, formatTime12, totalFees } from "@/lib/format";
-import { buAdminNames, hrHeadNames } from "@/lib/services/parties";
+import { buAdminNames, hrHeadNames, worldOf } from "@/lib/services/parties";
 import { getRequestForUser } from "@/lib/services/requests";
 import { buildStations } from "@/lib/services/tracker";
 import { canComment, canEditContent, canEditLndFields, getAllowedActions, STAGE_LABEL, stageOf } from "@/lib/workflow";
@@ -47,7 +47,7 @@ export default async function RequestDetailPage({ params, searchParams }: PagePr
 
   const r = d.request;
   const actions = getAllowedActions(r, user.actor, d.counts);
-  const stations = buildStations(d, { hod: d.department?.hod?.name ?? null, bu: await buAdminNames(db, r.businessUnitId), hr: await hrHeadNames(db) });
+  const stations = buildStations(d, { hod: d.department?.hod?.name ?? null, bu: await buAdminNames(db, r.businessUnitId, worldOf(d.requester.email)), hr: await hrHeadNames(db, worldOf(d.requester.email)) });
   const stage = stageOf(r.status);
   const participants = effectiveParticipants(r, d.candidates.length);
   const total = totalFees(r.feePerPax, participants);

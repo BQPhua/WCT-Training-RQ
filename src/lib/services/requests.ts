@@ -39,7 +39,7 @@ import {
 } from "@/lib/validation/request";
 import { yearInMY } from "@/lib/format";
 import { NoBuAdminError, NoDepartmentError, NoHodError, NotFoundError, ServiceError, StaleVersionError, ValidationFailedError } from "./errors";
-import { loadParties, roleHolderCounts } from "./parties";
+import { loadParties, roleHolderCounts, worldOf, type World } from "./parties";
 import { allocateRefNo } from "./ref-no";
 
 export * from "./errors";
@@ -218,23 +218,28 @@ export async function updateContent(user: CurrentUser, id: string, version: numb
 }
 
 /**
- * Demo accounts (signed in from the demo list, or "viewed as" by an admin) may only
- * act on demo requests, so demo role holders can never decide on real staff requests.
+ * Demo and real never mix. Demo accounts (signed in from the demo list, or "viewed as"
+ * by an admin) may only act on demo requests, and real staff only on real ones.
+ * Returns the request's world for routing and role counts.
  */
-async function assertDemoScope(tx: Tx, user: CurrentUser, requesterId: string) {
-  if (!isDemoUser(user)) return;
+async function assertDemoScope(tx: Tx, user: CurrentUser, requesterId: string): Promise<World> {
   const [r] = await tx.select({ email: users.email }).from(users).where(eq(users.id, requesterId));
-  if (!r || !isDemoUser(r)) {
+  const world = r ? worldOf(r.email) : "real";
+  if (isDemoUser(user) && world !== "demo") {
     throw new ServiceError(
       user.viewedBy ? "While viewing as a demo user you can only act on demo requests." : "Demo accounts can only act on demo requests.",
       403,
     );
   }
+  if (!isDemoUser(user) && world === "demo") {
+    throw new ServiceError("Demo requests can only be handled by demo accounts. Use View as demo user.", 403);
+  }
+  return world;
 }
 
 /** A request can only move towards the BU Admin step when its business unit has one. */
-async function assertBuAdmin(tx: Tx, businessUnitId: string | null, forRequester: boolean) {
-  const { buAdmin } = await roleHolderCounts(tx, businessUnitId);
+async function assertBuAdmin(tx: Tx, businessUnitId: string | null, forRequester: boolean, world: World) {
+  const { buAdmin } = await roleHolderCounts(tx, businessUnitId, world);
   if (buAdmin > 0) return;
   const [bu] = businessUnitId
     ? await tx.select({ name: businessUnits.name }).from(businessUnits).where(eq(businessUnits.id, businessUnitId))
@@ -251,7 +256,7 @@ export async function performAction(
   const result = await db.transaction(async (tx) => {
     const r = await lockRequest(tx, input.requestId);
     if (!canView(ref(r), user.actor)) throw new NotFoundError();
-    await assertDemoScope(tx, user, r.requesterId);
+    const world = await assertDemoScope(tx, user, r.requesterId);
     await assertVersion(tx, r, input.version);
 
     const isSubmit = input.type === "SUBMIT" || input.type === "RESUBMIT";
@@ -275,10 +280,10 @@ export async function performAction(
       businessUnitId = user.department.businessUnitId;
     }
 
-    const counts = await roleHolderCounts(tx, businessUnitId);
+    const counts = await roleHolderCounts(tx, businessUnitId, world);
     // transition() first, so someone without rights gets FORBIDDEN rather than the BU Admin message.
     const t = transition({ ...ref(r), departmentId, businessUnitId }, user.actor, { type: input.type, remark: input.remark }, counts);
-    if (t.toStatus === "PENDING_BU" || (isSubmit && t.toStatus === "PENDING_HOD")) await assertBuAdmin(tx, businessUnitId, isSubmit);
+    if (t.toStatus === "PENDING_BU" || (isSubmit && t.toStatus === "PENDING_HOD")) await assertBuAdmin(tx, businessUnitId, isSubmit, world);
     const now = new Date();
 
     let refNo = r.refNo;
@@ -431,7 +436,7 @@ export async function getRequestForUser(user: CurrentUser, id: string) {
     comments: cmts,
     attachments: atts,
     revisions,
-    counts: await roleHolderCounts(db, (request as TrainingRequest).businessUnitId),
+    counts: await roleHolderCounts(db, (request as TrainingRequest).businessUnitId, worldOf(requester.email)),
   };
 }
 export type RequestDetail = NonNullable<Awaited<ReturnType<typeof getRequestForUser>>>;

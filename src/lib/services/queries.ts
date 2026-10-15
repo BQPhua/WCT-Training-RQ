@@ -3,7 +3,7 @@ import { db } from "@/db";
 import { trainingRequests as tr } from "@/db/schema";
 import type { CurrentUser } from "@/lib/auth/load-user";
 import { DEMO_EMAIL_DOMAIN, isDemoUser } from "@/lib/auth/roles";
-import { roleHolderCounts } from "./parties";
+import { roleHolderCounts, worldOf } from "./parties";
 
 const FALSE = sql`false`;
 
@@ -20,6 +20,12 @@ export function demoScopeWhere(user: CurrentUser): SQL {
   return sql`${tr.requesterId} in (select u.id from users u where lower(u.email) like ${"%" + DEMO_EMAIL_DOMAIN})`;
 }
 
+/** SQL filter: requests raised in the user's own world (demo accounts ↔ demo requests, real staff ↔ real requests). */
+function sameWorldWhere(user: CurrentUser): SQL {
+  if (isDemoUser(user)) return demoScopeWhere(user);
+  return sql`${tr.requesterId} not in (select u.id from users u where lower(u.email) like ${"%" + DEMO_EMAIL_DOMAIN})`;
+}
+
 /** SQL filter: every request this user is allowed to see (mirrors workflow.canView). */
 export function visibleRequestsWhere(user: CurrentUser): SQL {
   const { hodDepartmentIds, buAdminBusinessUnitIds } = user.actor;
@@ -33,7 +39,7 @@ export function visibleRequestsWhere(user: CurrentUser): SQL {
 /** SQL filter: requests waiting for this user's action (approvals inbox + own returned items). */
 export async function awaitingActionWhere(user: CurrentUser): Promise<SQL> {
   const { roles, hodDepartmentIds, buAdminBusinessUnitIds } = user.actor;
-  const counts = await roleHolderCounts(db);
+  const counts = await roleHolderCounts(db, null, worldOf(user.email));
   const parts: SQL[] = [and(eq(tr.status, "RETURNED"), eq(tr.requesterId, user.id))!];
   if (hodDepartmentIds.length) parts.push(and(eq(tr.status, "PENDING_HOD"), inArray(tr.departmentId, hodDepartmentIds))!);
   if (buAdminBusinessUnitIds.length) {
@@ -46,7 +52,8 @@ export async function awaitingActionWhere(user: CurrentUser): Promise<SQL> {
   if (roles.includes("HR_HEAD")) {
     parts.push(and(eq(tr.status, "PENDING_HR"), counts.hrHead <= 1 ? sql`true` : ne(tr.requesterId, user.id))!);
   }
-  return and(demoScopeWhere(user), or(...parts))!;
+  // Inbox in one world only: real approvers never get demo requests to decide, and vice versa.
+  return and(sameWorldWhere(user), or(...parts))!;
 }
 
 /** Approvals only (excludes the user's own returned requests). */

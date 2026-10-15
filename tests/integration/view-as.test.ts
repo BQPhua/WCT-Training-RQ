@@ -86,6 +86,9 @@ describe("view as: demo accounts act on demo requests only", () => {
     // A real staff member in a demo department (shares the demo HOD/BU Admin).
     const [dept] = await db.select().from(departments).where(eq(departments.name, "Land – Project Management"));
     await db.insert(users).values({ email: "real.staff@wct.my", name: "Real Staff", departmentId: dept.id });
+    const [realBu] = await db.insert(users).values({ email: "real.buadmin@wct.my", name: "Real BU Admin" }).returning();
+    const { businessUnitAdmins } = await import("@/db/schema");
+    await db.insert(businessUnitAdmins).values({ businessUnitId: dept.businessUnitId, userId: realBu.id });
     const real = await asUser("real.staff@wct.my");
     const { id: realId } = await createDraft(real, validDraft);
     await performAction(real, { requestId: realId, version: 1, type: "SUBMIT" });
@@ -110,6 +113,10 @@ describe("demo sign-in from the sign-in page", () => {
     const { demoSignInTarget } = await import("@/lib/services/view-as");
     const u = await demoSignInTarget(await idOf("hrhead@demo.wct.my"));
     expect(u.email).toBe("hrhead@demo.wct.my");
+    const { recordDemoSignIn } = await import("@/lib/services/view-as");
+    await recordDemoSignIn(u, "10.0.0.5");
+    const rows = await db.select().from(adminAuditLogs).where(eq(adminAuditLogs.actorId, u.id));
+    expect(rows.map((r) => r.change)).toContainEqual({ op: "demo-sign-in", ip: "10.0.0.5" });
   });
 
   it("refuses real staff, inactive demo accounts and unknown ids", async () => {
