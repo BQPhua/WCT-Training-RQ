@@ -146,6 +146,16 @@ Runner service: `sudo systemctl status 'actions.runner.*wct-hrform01-trq*'`. To 
 3. In **Admin settings → Roles**, add the **L&D Team** members, the **HR Head** and other System Admins.
 4. Raise a test request end to end. Check that the emails arrive and the PDF prints correctly.
 
+## Microsoft icon on the sign-in button
+
+The sign-in button shows Microsoft's logo when `public/brand/microsoft-logo.svg` exists in the repository. The file isn't shipped with the code; add Microsoft's official asset yourself:
+
+1. Download the "Sign in with Microsoft" logo (SVG) from Microsoft's identity platform branding guidelines on learn.microsoft.com.
+2. In GitHub, open the repository, go to the `public/brand` folder and choose **Add file → Upload files**. Name the file `microsoft-logo.svg` and commit it to `main`.
+3. Auto-deploy publishes it.
+
+Until the file is there, the button shows a key icon.
+
 ## Release checklist (each deploy)
 
 **Before**
