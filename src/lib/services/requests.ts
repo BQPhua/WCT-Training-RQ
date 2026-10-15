@@ -198,6 +198,7 @@ export async function updateContent(user: CurrentUser, id: string, version: numb
   return db.transaction(async (tx) => {
     const r = await lockRequest(tx, id);
     if (!canView(ref(r), user.actor)) throw new NotFoundError();
+    await assertViewAsScope(tx, user, r.requesterId);
     if (!canEditContent(ref(r), user.actor)) throw new WorkflowError("FORBIDDEN", "This request can no longer be edited.");
     await assertVersion(tx, r, version);
     const [u] = await tx
@@ -215,14 +216,26 @@ export async function updateContent(user: CurrentUser, id: string, version: numb
   });
 }
 
+/**
+ * A System Admin "viewing as" a demo account may only act on demo requests, so
+ * demo role holders can never decide or comment on real staff requests.
+ */
+async function assertViewAsScope(tx: Tx, user: CurrentUser, requesterId: string) {
+  if (!user.viewedBy) return;
+  const [r] = await tx.select({ email: users.email }).from(users).where(eq(users.id, requesterId));
+  if (!r?.email.toLowerCase().endsWith("@demo.wct.my")) {
+    throw new ServiceError("While viewing as a demo user you can only act on demo requests.", 403);
+  }
+}
+
 /** A request can only move towards the BU Admin step when its business unit has one. */
-async function assertBuAdmin(tx: Tx, businessUnitId: string | null) {
+async function assertBuAdmin(tx: Tx, businessUnitId: string | null, forRequester: boolean) {
   const { buAdmin } = await roleHolderCounts(tx, businessUnitId);
   if (buAdmin > 0) return;
   const [bu] = businessUnitId
     ? await tx.select({ name: businessUnits.name }).from(businessUnits).where(eq(businessUnits.id, businessUnitId))
     : [];
-  throw new NoBuAdminError(bu?.name ?? null);
+  throw new NoBuAdminError(bu?.name ?? null, forRequester);
 }
 
 export async function performAction(
@@ -234,6 +247,7 @@ export async function performAction(
   const result = await db.transaction(async (tx) => {
     const r = await lockRequest(tx, input.requestId);
     if (!canView(ref(r), user.actor)) throw new NotFoundError();
+    await assertViewAsScope(tx, user, r.requesterId);
     await assertVersion(tx, r, input.version);
 
     const isSubmit = input.type === "SUBMIT" || input.type === "RESUBMIT";
@@ -257,10 +271,10 @@ export async function performAction(
       businessUnitId = user.department.businessUnitId;
     }
 
-    if (isSubmit || (input.type === "APPROVE" && r.status === "PENDING_HOD")) await assertBuAdmin(tx, businessUnitId);
-
     const counts = await roleHolderCounts(tx, businessUnitId);
+    // transition() first, so someone without rights gets FORBIDDEN rather than the BU Admin message.
     const t = transition({ ...ref(r), departmentId, businessUnitId }, user.actor, { type: input.type, remark: input.remark }, counts);
+    if (t.toStatus === "PENDING_BU" || (isSubmit && t.toStatus === "PENDING_HOD")) await assertBuAdmin(tx, businessUnitId, isSubmit);
     const now = new Date();
 
     let refNo = r.refNo;
@@ -322,6 +336,7 @@ export async function updateLndFields(user: CurrentUser, id: string, version: nu
   return db.transaction(async (tx) => {
     const r = await lockRequest(tx, id);
     if (!canView(ref(r), user.actor)) throw new NotFoundError();
+    await assertViewAsScope(tx, user, r.requesterId);
     if (!canEditLndFields(ref(r), user.actor)) {
       throw new WorkflowError("FORBIDDEN", "L&D details can only be edited while the request is pending L&D review.");
     }
@@ -353,6 +368,7 @@ export async function addComment(user: CurrentUser, id: string, body: string) {
   await db.transaction(async (tx) => {
     const [r] = await tx.select().from(trainingRequests).where(eq(trainingRequests.id, id));
     if (!r || !canView(ref(r), user.actor)) throw new NotFoundError();
+    await assertViewAsScope(tx, user, r.requesterId);
     if (!canComment(ref(r), user.actor)) throw new WorkflowError("FORBIDDEN", "Comments open once the request is submitted.");
     await tx.insert(comments).values({ requestId: id, authorId: user.id, body: text });
     const event: WorkflowEvent = { kind: "COMMENTED", fromStatus: r.status, actorId: user.id };

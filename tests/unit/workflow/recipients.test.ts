@@ -97,4 +97,12 @@ describe("resolveRecipients", () => {
     const r = resolveRecipients(ev({ kind: "SUBMITTED", fromStatus: "DRAFT" }), { ...parties, hod: null });
     expect(r.to).toEqual([]);
   });
+
+  it("REJECTED never copies the rejecting approver, even if they approved earlier in the round", () => {
+    const r = resolveRecipients(
+      ev({ kind: "REJECTED", fromStatus: "PENDING_BU", byStage: "BU", sentBackTo: "REQUESTER", actorId: P.hod.id }),
+      { ...parties, roundApprovers: [P.hod] },
+    );
+    expect(r.cc).toEqual([]);
+  });
 });

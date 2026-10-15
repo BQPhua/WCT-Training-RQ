@@ -98,10 +98,19 @@ describe("BU Admin step and rejection", () => {
     );
   });
 
-  it("HOD approval is blocked after the unit's only BU Admin is deactivated", async () => {
+  it("HOD approval is blocked after the unit's only BU Admin is deactivated, with a message for the approver", async () => {
     const id = await submitted();
     await db.update(users).set({ isActive: false }).where(eq(users.email, "buadmin.land@demo.wct.my"));
     await expect(act("hod.land@demo.wct.my", id, { type: "APPROVE" })).rejects.toBeInstanceOf(NoBuAdminError);
+    await expect(act("hod.land@demo.wct.my", id, { type: "APPROVE" })).rejects.toThrow(
+      "This request's business unit (Land) has no BU Admin assigned, so it can't move on yet. Please contact HR.",
+    );
+  });
+
+  it("someone without approval rights gets FORBIDDEN, not the BU Admin message", async () => {
+    const id = await submitted();
+    await db.update(users).set({ isActive: false }).where(eq(users.email, "buadmin.land@demo.wct.my"));
+    await expect(act("lnd1@demo.wct.my", id, { type: "APPROVE" })).rejects.toBeInstanceOf(WorkflowError);
   });
 
   it("BU Admin rejects → RETURNED; requester emailed, HOD copied", async () => {

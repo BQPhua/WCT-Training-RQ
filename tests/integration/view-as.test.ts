@@ -75,3 +75,32 @@ describe("view as demo user", () => {
     expect(list.every((a) => a.email.endsWith("@demo.wct.my"))).toBe(true);
   });
 });
+
+describe("view as: demo accounts act on demo requests only", () => {
+  it("an admin viewing as the demo HR Head cannot act on a real staff request, but can on a demo one", async () => {
+    const { createDraft, performAction, setNotifier, updateLndFields, addComment } = await import("@/lib/services/requests");
+    const { validDraft } = await import("./helpers");
+    const { trainingRequests, departments } = await import("@/db/schema");
+    setNotifier(async () => {});
+    const admin = await realAdmin();
+    // A real staff member in a demo department (shares the demo HOD/BU Admin).
+    const [dept] = await db.select().from(departments).where(eq(departments.name, "Land – Project Management"));
+    await db.insert(users).values({ email: "real.staff@wct.my", name: "Real Staff", departmentId: dept.id });
+    const real = await asUser("real.staff@wct.my");
+    const { id: realId } = await createDraft(real, validDraft);
+    await performAction(real, { requestId: realId, version: 1, type: "SUBMIT" });
+    const asHod = (await resolveViewAs(admin.id, await idOf("hod.land@demo.wct.my")))!;
+    const v = (await db.select({ v: trainingRequests.version }).from(trainingRequests).where(eq(trainingRequests.id, realId)))[0].v;
+    await expect(performAction(asHod, { requestId: realId, version: v, type: "APPROVE" })).rejects.toThrow(
+      "While viewing as a demo user you can only act on demo requests.",
+    );
+    await expect(addComment(asHod, realId, "hi")).rejects.toThrow("While viewing as a demo user you can only act on demo requests.");
+    await expect(updateLndFields(asHod, realId, v, { hrdcClaimable: true })).rejects.toThrow(/demo requests|L&D details/);
+
+    const demoReq = await asUser("requester@demo.wct.my");
+    const { id: demoId } = await createDraft(demoReq, validDraft);
+    await performAction(demoReq, { requestId: demoId, version: 1, type: "SUBMIT" });
+    const r = await performAction(asHod, { requestId: demoId, version: 2, type: "APPROVE" });
+    expect(r.status).toBe("PENDING_BU");
+  });
+});

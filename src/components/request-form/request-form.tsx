@@ -409,6 +409,8 @@ export function RequestForm(props: RequestFormProps) {
               nameList={nameList}
               onNameListChange={(item) => {
                 setNameList(item);
+                if (!item) setParticipantCount(""); // the server clears the count with the list
+                markDirty(); // re-save so the count is stored against the list
                 if (errors.nameList) setErrors(({ nameList: _n, ...rest }) => rest);
               }}
               participantCount={participantCount}

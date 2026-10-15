@@ -8,6 +8,8 @@ export default defineConfig({
   expect: { timeout: 15_000 },
   fullyParallel: false,
   workers: 1,
+  // CI runs against a cold dev server; one retry keeps a compile-time hiccup from blocking a deploy.
+  retries: process.env.CI ? 1 : 0,
   reporter: [["list"]],
   use: {
     baseURL: `${BASE}/`,

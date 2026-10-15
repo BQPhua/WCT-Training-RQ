@@ -32,7 +32,7 @@ function dedupe(people: Person[], exclude: Set<string> = new Set()): Person[] {
 
 /**
  * Who should be emailed for a workflow event (spec 2026-10-15 §1).
- * The actor is removed from `to`; anyone in `to` is removed from `cc`.
+ * The actor is removed from `to` (and from `cc` on a rejection); anyone in `to` is removed from `cc`.
  */
 export function resolveRecipients(event: WorkflowEvent, p: Parties): { to: Person[]; cc: Person[] } {
   let to: Person[] = [];
@@ -79,6 +79,8 @@ export function resolveRecipients(event: WorkflowEvent, p: Parties): { to: Perso
       .map((x) => x.email.toLowerCase()),
   );
   const toFinal = dedupe(to, actorEmails);
-  const ccFinal = dedupe(cc, new Set(toFinal.map((x) => x.email.toLowerCase())));
+  // The requester is still copied on their own submission; a rejecting approver is never copied on their own rejection.
+  const ccExclude = event.kind === "REJECTED" ? [...actorEmails] : [];
+  const ccFinal = dedupe(cc, new Set([...ccExclude, ...toFinal.map((x) => x.email.toLowerCase())]));
   return { to: toFinal, cc: ccFinal };
 }

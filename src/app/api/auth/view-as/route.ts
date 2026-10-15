@@ -3,6 +3,7 @@ import { z } from "zod";
 import { AuthError, getSignedInUser } from "@/lib/auth/current-user";
 import { getSession } from "@/lib/auth/session";
 import { apiError } from "@/lib/api";
+import { isJsonContentType } from "@/lib/content-type";
 import { startViewAs, stopViewAs } from "@/lib/services/view-as";
 
 const body = z.union([z.object({ userId: z.uuid() }), z.object({ stop: z.literal(true) })]);
@@ -10,7 +11,7 @@ const body = z.union([z.object({ userId: z.uuid() }), z.object({ stop: z.literal
 /** Start or stop viewing the app as a demo account (System Admin only). JSON only, so forms on other sites can't post here. */
 export async function POST(req: NextRequest) {
   try {
-    if (!req.headers.get("content-type")?.includes("application/json")) return NextResponse.json({ error: "Expected JSON" }, { status: 415 });
+    if (!isJsonContentType(req.headers.get("content-type"))) return NextResponse.json({ error: "Expected JSON" }, { status: 415 });
     const real = await getSignedInUser();
     if (!real) throw new AuthError(401, "Please sign in again.");
     const parsed = body.safeParse(await req.json().catch(() => null));

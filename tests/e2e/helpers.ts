@@ -16,3 +16,13 @@ export async function decide(page: Page, url: string, kind: "approve") {
   await expect(page.getByText("Approved and passed to the next stage")).toBeVisible();
   return kind;
 }
+
+/** Opens the sidebar user menu and clicks an item; retries until the page has hydrated. */
+export async function userMenuItem(page: Page, name: RegExp) {
+  const item = page.getByRole("menuitem", { name });
+  await expect(async () => {
+    await page.locator("aside button[aria-haspopup]").first().click();
+    await expect(item).toBeVisible({ timeout: 2000 });
+  }).toPass({ timeout: 30_000 });
+  await item.click();
+}

@@ -83,6 +83,10 @@ export async function deleteAttachment(user: CurrentUser, attachmentId: string) 
   const found = await loadAuthorised(user, attachmentId);
   if (!found) throw new NotFoundError();
   if (!canEditContent(found.r, user.actor)) throw new ServiceError("Attachments can only be changed while the request is a draft or returned.", 403);
-  await db.delete(attachments).where(eq(attachments.id, attachmentId));
+  await db.transaction(async (tx) => {
+    await tx.delete(attachments).where(eq(attachments.id, attachmentId));
+    // Without its name list the request has no entered participant count any more.
+    if (found.att.kind === "NAME_LIST") await tx.update(trainingRequests).set({ participantCount: null }).where(eq(trainingRequests.id, found.att.requestId));
+  });
   await unlink(storagePath(found.att.storedName)).catch(() => {});
 }

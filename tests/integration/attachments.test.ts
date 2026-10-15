@@ -102,4 +102,14 @@ describe("participant name list", () => {
       "Name list must be an Excel or CSV file",
     );
   });
+
+  it("removing the name list clears the participant count", async () => {
+    const req = await asUser("requester@demo.wct.my");
+    const { id } = await createDraft(req, validDraft);
+    const att = await saveAttachment(req, id, { name: "names.csv", type: "text/csv", bytes: csv }, "NAME_LIST");
+    await updateContent(req, id, await versionOf(id), { ...validDraft, candidates: [], participantCount: 40 });
+    await deleteAttachment(req, att.id);
+    const [r] = await db.select({ n: trainingRequests.participantCount }).from(trainingRequests).where(eq(trainingRequests.id, id));
+    expect(r.n).toBeNull();
+  });
 });

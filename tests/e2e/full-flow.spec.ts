@@ -102,3 +102,22 @@ test("name list replaces typed names", async ({ browser }) => {
   await req.locator("#participantCount").fill("25");
   await expect(req.getByText("25 ×")).toBeVisible();
 });
+
+test("participant count typed before the name list upload is kept after reload", async ({ browser }) => {
+  const req = await signInAs(browser, "requester@demo.wct.my");
+  await req.goto("requests/new");
+  await req.locator("#title").fill(`E2E Count before list ${Date.now()}`);
+  await req.getByRole("radio", { name: /Upload name list/ }).click();
+  await req.locator("#participantCount").fill("40");
+  await expect(req.getByText(/Draft saved automatically/)).toBeVisible({ timeout: 15_000 });
+  await req.locator('input[type="file"][accept=".xlsx,.xls,.csv"]').setInputFiles({
+    name: "names.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from("Name\nAli\n"),
+  });
+  await expect(req.getByRole("link", { name: "names.csv" })).toBeVisible();
+  await expect(req.getByText(/Draft saved automatically/)).toBeVisible({ timeout: 15_000 });
+  await req.waitForTimeout(500);
+  await req.reload();
+  await expect(req.locator("#participantCount")).toHaveValue("40");
+});

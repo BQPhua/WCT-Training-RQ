@@ -93,7 +93,8 @@ curl http://127.0.0.1:3110/WCT-Training-RQ/api/health  # {"ok":true,"db":true}
 > **Sample data for a trial run** (optional): `sudo -iu trq /opt/wct-training-rq/current/scripts/demo-data.sh load`
 > - It adds 12 demo people (`@demo.wct.my`), 7 demo departments and about 30 requests in every status. No emails are sent.
 > - Load it **before** you create real departments.
-> - **Remove it before go-live** with `… demo-data.sh remove`. Otherwise the demo L&D, HR Head and BU Admin accounts would be included in real notifications.
+> - **Go-live order:** first assign the real BU Admins (Land, E&C, Malls), L&D Team and HR Head in **Admin settings**, then run `… demo-data.sh remove`. Removing the demo data also removes the demo BU Admins, and requests can't be submitted while a business unit has no BU Admin.
+> - Until then, demo L&D, HR Head and BU Admin accounts are included in real notifications. While viewing as a demo user, a System Admin can only act on demo requests.
 > - Removal deletes only demo records, and reference numbers continue from the highest real one.
 
 ## 6. Nginx

@@ -15,6 +15,7 @@ export async function POST(req: NextRequest) {
   if (!user || !user.isActive) return NextResponse.redirect(`${env.APP_URL}/signin?error=dev_user`, { status: 303 });
   const session = await getSession();
   session.userId = user.id;
+  delete session.viewAsUserId; // a new sign-in never inherits "view as"
   session.signedInAt = Date.now();
   await session.save();
   return NextResponse.redirect(`${env.APP_URL}${safeReturnTo(String(form.get("returnTo") ?? ""))}`, { status: 303 });
