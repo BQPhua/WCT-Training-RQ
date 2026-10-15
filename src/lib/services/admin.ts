@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, count, desc, eq, ilike, ne, or, sql } from "drizzle-orm";
+import { and, asc, countDistinct, desc, eq, ilike, inArray, like as sqlLike, ne, not, or, sql, type SQL } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
 import {
@@ -13,6 +13,7 @@ import {
   users,
 } from "@/db/schema";
 import type { CurrentUser } from "@/lib/auth/load-user";
+import { DEMO_EMAIL_DOMAIN, isDemoUser, isSystemAdmin } from "@/lib/auth/roles";
 import type { RoleName } from "@/lib/workflow";
 import { ServiceError } from "./errors";
 
@@ -22,8 +23,20 @@ export class AdminForbiddenError extends ServiceError {
   }
 }
 
+/** Reads: L&D and System Admins (demo ones included, with demo-only lists). */
+function requireAdminRead(user: CurrentUser) {
+  if (!isSystemAdmin(user)) throw new AdminForbiddenError();
+}
+
+/** Writes: L&D and System Admins, never demo accounts (the demo sign-in is open to stakeholders). */
 function requireAdmin(user: CurrentUser) {
-  if (!user.actor.roles.includes("SYS_ADMIN")) throw new AdminForbiddenError();
+  requireAdminRead(user);
+  if (isDemoUser(user)) throw new ServiceError("Demo accounts can look at settings but can't change them.", 403);
+}
+
+/** People a viewer may see in admin lists: demo viewers only ever see demo accounts. */
+function peopleScope(user: CurrentUser): SQL {
+  return isDemoUser(user) ? sqlLike(users.email, `%${DEMO_EMAIL_DOMAIN}`) : sql`true`;
 }
 
 async function audit(actor: CurrentUser, entity: string, entityId: string, change: Record<string, unknown>) {
@@ -92,6 +105,27 @@ export async function upsertDepartment(user: CurrentUser, input: z.input<typeof 
 }
 
 // ---------- Roles & users ----------
+/**
+ * Active, real (non-demo) people with full access (L&D Team or System Admin),
+ * not counting the role assignments matched by `excluding`. Demo admins never count:
+ * they disappear with the demo data.
+ */
+async function realAdminCount(excluding: SQL): Promise<number> {
+  const [{ n }] = await db
+    .select({ n: countDistinct(roleAssignments.userId) })
+    .from(roleAssignments)
+    .innerJoin(users, eq(roleAssignments.userId, users.id))
+    .where(
+      and(
+        inArray(roleAssignments.role, ["SYS_ADMIN", "LND"]),
+        eq(users.isActive, true),
+        sql`lower(${users.email}) not like ${"%" + DEMO_EMAIL_DOMAIN}`,
+        not(excluding),
+      ),
+    );
+  return n;
+}
+
 export async function assignRole(user: CurrentUser, userId: string, role: RoleName) {
   requireAdmin(user);
   UUID.parse(userId);
@@ -102,9 +136,10 @@ export async function assignRole(user: CurrentUser, userId: string, role: RoleNa
 export async function revokeRole(user: CurrentUser, userId: string, role: RoleName) {
   requireAdmin(user);
   UUID.parse(userId);
-  if (role === "SYS_ADMIN") {
-    const [{ n }] = await db.select({ n: count() }).from(roleAssignments).where(eq(roleAssignments.role, "SYS_ADMIN"));
-    if (n <= 1) throw new ServiceError("You can't remove the last system admin.", 422);
+  if (role === "SYS_ADMIN" || role === "LND") {
+    // L&D members and System Admins both have full access; keep at least one of them.
+    const n = await realAdminCount(and(eq(roleAssignments.userId, userId), eq(roleAssignments.role, role))!);
+    if (n < 1) throw new ServiceError("You can't remove the last system admin (L&D Team or System Admin).", 422);
   }
   await db.delete(roleAssignments).where(and(eq(roleAssignments.userId, userId), eq(roleAssignments.role, role)));
   await audit(user, "role", userId, { op: "revoke", role });
@@ -117,6 +152,9 @@ export async function updateUser(user: CurrentUser, userId: string, patch: z.inp
   UUID.parse(userId);
   const p = userPatch.parse(patch);
   if (userId === user.id && p.isActive === false) throw new ServiceError("You can't deactivate yourself.", 422);
+  if (p.isActive === false && (await realAdminCount(eq(roleAssignments.userId, userId))) < 1) {
+    throw new ServiceError("You can't deactivate the last system admin (L&D Team or System Admin).", 422);
+  }
   await db.update(users).set(p).where(eq(users.id, userId));
   await audit(user, "user", userId, p);
 }
@@ -134,53 +172,76 @@ export async function createUser(user: CurrentUser, input: { email: string; name
 
 // ---------- Reads for admin pages ----------
 export async function adminOverview(user: CurrentUser) {
-  requireAdmin(user);
+  requireAdminRead(user);
+  const people = peopleScope(user);
   const [bus, depts, buAdmins, roles, [{ failed }]] = await Promise.all([
     db.select().from(businessUnits).orderBy(asc(businessUnits.name)),
     db
       .select({ id: departments.id, name: departments.name, isActive: departments.isActive, businessUnitId: departments.businessUnitId, hodUserId: departments.hodUserId, hodName: users.name })
       .from(departments)
-      .leftJoin(users, eq(departments.hodUserId, users.id))
+      .leftJoin(users, and(eq(departments.hodUserId, users.id), people))
+      .where(
+        // Demo viewers see the demo organisation only: departments with a demo HOD or demo members.
+        isDemoUser(user)
+          ? sql`exists (select 1 from users u where (u.id = ${departments.hodUserId} or u.department_id = ${departments.id}) and lower(u.email) like ${"%" + DEMO_EMAIL_DOMAIN})`
+          : sql`true`,
+      )
       .orderBy(asc(departments.name)),
-    db.select({ businessUnitId: businessUnitAdmins.businessUnitId, userId: users.id, name: users.name }).from(businessUnitAdmins).innerJoin(users, eq(businessUnitAdmins.userId, users.id)),
-    db.select({ role: roleAssignments.role, userId: users.id, name: users.name, email: users.email }).from(roleAssignments).innerJoin(users, eq(roleAssignments.userId, users.id)).orderBy(asc(users.name)),
-    db.select({ failed: count() }).from(notificationLogs).where(eq(notificationLogs.status, "FAILED")),
+    db.select({ businessUnitId: businessUnitAdmins.businessUnitId, userId: users.id, name: users.name }).from(businessUnitAdmins).innerJoin(users, and(eq(businessUnitAdmins.userId, users.id), people)),
+    db.select({ role: roleAssignments.role, userId: users.id, name: users.name, email: users.email }).from(roleAssignments).innerJoin(users, and(eq(roleAssignments.userId, users.id), people)).orderBy(asc(users.name)),
+    db
+      .select({ failed: countDistinct(notificationLogs.id) })
+      .from(notificationLogs)
+      .leftJoin(trainingRequests, eq(notificationLogs.requestId, trainingRequests.id))
+      .where(and(eq(notificationLogs.status, "FAILED"), notificationScope(user))),
   ]);
-  return { bus, depts, buAdmins, roles, failedNotifications: failed };
+  // Never hand a real HOD's id to a demo viewer's client components.
+  const shownDepts = isDemoUser(user) ? depts.map((d) => (d.hodName ? d : { ...d, hodUserId: null })) : depts;
+  return { bus, depts: shownDepts, buAdmins, roles, failedNotifications: failed };
 }
 
 export async function listUsers(user: CurrentUser, q?: string) {
-  requireAdmin(user);
+  requireAdminRead(user);
   const like = q ? `%${q.replace(/[%_\\]/g, "\\$&")}%` : null;
   return db
     .select({ id: users.id, name: users.name, email: users.email, jobTitle: users.jobTitle, isActive: users.isActive, departmentId: users.departmentId, entraDepartment: users.entraDepartment, lastLoginAt: users.lastLoginAt, departmentName: departments.name })
     .from(users)
     .leftJoin(departments, eq(users.departmentId, departments.id))
-    .where(like ? or(ilike(users.name, like), ilike(users.email, like)) : sql`true`)
+    .where(and(peopleScope(user), like ? or(ilike(users.name, like), ilike(users.email, like)) : sql`true`))
     .orderBy(asc(users.name))
     .limit(200);
 }
 
-export async function userOptions() {
-  return db.select({ id: users.id, name: users.name, email: users.email }).from(users).where(eq(users.isActive, true)).orderBy(asc(users.name));
+export async function userOptions(user: CurrentUser) {
+  requireAdminRead(user);
+  return db
+    .select({ id: users.id, name: users.name, email: users.email })
+    .from(users)
+    .where(and(eq(users.isActive, true), peopleScope(user)))
+    .orderBy(asc(users.name));
+}
+
+/** Demo viewers only see notifications about demo requests. */
+function notificationScope(user: CurrentUser): SQL {
+  if (!isDemoUser(user)) return sql`true`;
+  return sql`${trainingRequests.requesterId} in (select id from users where email like ${"%" + DEMO_EMAIL_DOMAIN})`;
 }
 
 export async function listNotifications(user: CurrentUser) {
-  requireAdmin(user);
-  return db
+  requireAdminRead(user);
+  const rows = await db
     .select({ id: notificationLogs.id, event: notificationLogs.event, status: notificationLogs.status, attempts: notificationLogs.attempts, lastError: notificationLogs.lastError, createdAt: notificationLogs.createdAt, sentAt: notificationLogs.sentAt, refNo: trainingRequests.refNo, requestId: trainingRequests.id, payload: notificationLogs.payload })
     .from(notificationLogs)
     .leftJoin(trainingRequests, eq(notificationLogs.requestId, trainingRequests.id))
+    .where(notificationScope(user))
     .orderBy(desc(notificationLogs.createdAt))
     .limit(100);
+  if (!isDemoUser(user)) return rows;
+  // Demo viewers only ever see demo addresses, even on older log rows.
+  const demoOnly = (list: unknown) => (Array.isArray(list) ? list.filter((e) => typeof e === "string" && isDemoUser({ email: e })) : []);
+  return rows.map((r) => {
+    const p = (r.payload ?? {}) as { to?: unknown; cc?: unknown };
+    return { ...r, payload: { ...p, to: demoOnly(p.to), cc: demoOnly(p.cc) } };
+  });
 }
 
-export async function listAudit(user: CurrentUser) {
-  requireAdmin(user);
-  return db
-    .select({ id: adminAuditLogs.id, entity: adminAuditLogs.entity, entityId: adminAuditLogs.entityId, change: adminAuditLogs.change, createdAt: adminAuditLogs.createdAt, actorName: users.name })
-    .from(adminAuditLogs)
-    .innerJoin(users, eq(adminAuditLogs.actorId, users.id))
-    .orderBy(desc(adminAuditLogs.createdAt))
-    .limit(200);
-}

@@ -40,3 +40,20 @@ describe("BASE_PATH", () => {
     expect(BASE_PATH).toBe("/WCT-Training-RQ");
   });
 });
+
+describe("isDemoLoginEnabled", () => {
+  it("is on in production only when DEMO_LOGIN=true", async () => {
+    const { isDemoLoginEnabled } = await import("@/lib/env");
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("AUTH_DEV_LOGIN", "true");
+    expect(isDemoLoginEnabled()).toBe(false);
+    vi.stubEnv("DEMO_LOGIN", "true");
+    expect(isDemoLoginEnabled()).toBe(true);
+  });
+  it("is on in development whenever dev sign-in is on", async () => {
+    const { isDemoLoginEnabled } = await import("@/lib/env");
+    vi.stubEnv("NODE_ENV", "development");
+    vi.stubEnv("AUTH_DEV_LOGIN", "true");
+    expect(isDemoLoginEnabled()).toBe(true);
+  });
+});

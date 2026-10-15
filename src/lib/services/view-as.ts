@@ -4,18 +4,20 @@ import { db } from "@/db";
 import { adminAuditLogs, users } from "@/db/schema";
 import { loadCurrentUser, type CurrentUser } from "@/lib/auth/load-user";
 import { ServiceError } from "./errors";
+import { DEMO_EMAIL_DOMAIN, isDemoUser, isSystemAdmin } from "@/lib/auth/roles";
 
 /** Only seeded demo accounts can be viewed; never real staff. */
-export const DEMO_EMAIL_DOMAIN = "@demo.wct.my";
-const isDemo = (email: string) => email.toLowerCase().endsWith(DEMO_EMAIL_DOMAIN);
-const isAdmin = (u: CurrentUser) => u.actor.roles.includes("SYS_ADMIN");
+export { DEMO_EMAIL_DOMAIN };
+const isDemo = (email: string) => isDemoUser({ email });
+/** L&D members and System Admins (they only ever reach demo accounts). */
+const isAdmin = (u: CurrentUser) => isSystemAdmin(u);
 
 /** Human label for what a user can do, e.g. "Department HOD · HR Head". */
 export function roleLabelOf(u: CurrentUser): string {
   const labels = [
     ...(u.actor.hodDepartmentIds.length ? ["Department HOD"] : []),
     ...(u.actor.buAdminBusinessUnitIds.length ? ["BU Admin"] : []),
-    ...(u.actor.roles.includes("LND") ? ["L&D"] : []),
+    ...(u.actor.roles.includes("LND") ? ["L&D Team (System Admin)"] : []),
     ...(u.actor.roles.includes("HR_HEAD") ? ["HR Head"] : []),
     ...(u.actor.roles.includes("SYS_ADMIN") ? ["System Admin"] : []),
   ];
@@ -49,7 +51,7 @@ export async function listDemoAccounts(): Promise<{ id: string; name: string; em
 
 /** Validates and audits a switch; the caller stores the id in the session. */
 export async function startViewAs(real: CurrentUser, targetId: string): Promise<CurrentUser> {
-  if (!isAdmin(real)) throw new ServiceError("Only a System Admin can view the app as another user.", 403);
+  if (!isAdmin(real)) throw new ServiceError("Only the L&D Team or a System Admin can view the app as another user.", 403);
   const target = await loadCurrentUser(targetId);
   if (!target || !isDemo(target.email)) throw new ServiceError("Only demo accounts can be viewed.", 403);
   await db.insert(adminAuditLogs).values({ actorId: real.id, entity: "user", entityId: target.id, change: { op: "view-as-start", email: target.email } });
@@ -58,4 +60,16 @@ export async function startViewAs(real: CurrentUser, targetId: string): Promise<
 
 export async function stopViewAs(real: CurrentUser): Promise<void> {
   await db.insert(adminAuditLogs).values({ actorId: real.id, entity: "user", entityId: real.id, change: { op: "view-as-stop" } });
+}
+
+/** Each demo sign-in is recorded, so public use of the demo list leaves a trace. */
+export async function recordDemoSignIn(user: CurrentUser, ip: string | null): Promise<void> {
+  await db.insert(adminAuditLogs).values({ actorId: user.id, entity: "user", entityId: user.id, change: { op: "demo-sign-in", ip } });
+}
+
+/** Demo sign-in (sign-in page, behind DEMO_LOGIN): only active demo accounts, never real staff. */
+export async function demoSignInTarget(userId: string): Promise<CurrentUser> {
+  const target = await loadCurrentUser(userId);
+  if (!target || !isDemo(target.email)) throw new ServiceError("Only demo accounts can be used here.", 403);
+  return target;
 }

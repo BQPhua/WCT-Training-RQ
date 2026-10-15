@@ -70,7 +70,7 @@ describe("view as demo user", () => {
     expect(label("requester@demo.wct.my")).toBe("Requester");
     expect(label("hod.land@demo.wct.my")).toBe("Department HOD");
     expect(label("buadmin.land@demo.wct.my")).toBe("BU Admin");
-    expect(label("lnd1@demo.wct.my")).toBe("L&D");
+    expect(label("lnd1@demo.wct.my")).toBe("L&D Team (System Admin)");
     expect(label("hrhead@demo.wct.my")).toBe("Department HOD · HR Head");
     expect(list.every((a) => a.email.endsWith("@demo.wct.my"))).toBe(true);
   });
@@ -86,6 +86,9 @@ describe("view as: demo accounts act on demo requests only", () => {
     // A real staff member in a demo department (shares the demo HOD/BU Admin).
     const [dept] = await db.select().from(departments).where(eq(departments.name, "Land – Project Management"));
     await db.insert(users).values({ email: "real.staff@wct.my", name: "Real Staff", departmentId: dept.id });
+    const [realBu] = await db.insert(users).values({ email: "real.buadmin@wct.my", name: "Real BU Admin" }).returning();
+    const { businessUnitAdmins } = await import("@/db/schema");
+    await db.insert(businessUnitAdmins).values({ businessUnitId: dept.businessUnitId, userId: realBu.id });
     const real = await asUser("real.staff@wct.my");
     const { id: realId } = await createDraft(real, validDraft);
     await performAction(real, { requestId: realId, version: 1, type: "SUBMIT" });
@@ -102,5 +105,27 @@ describe("view as: demo accounts act on demo requests only", () => {
     await performAction(demoReq, { requestId: demoId, version: 1, type: "SUBMIT" });
     const r = await performAction(asHod, { requestId: demoId, version: 2, type: "APPROVE" });
     expect(r.status).toBe("PENDING_BU");
+  });
+});
+
+describe("demo sign-in from the sign-in page", () => {
+  it("signs in an active demo account", async () => {
+    const { demoSignInTarget } = await import("@/lib/services/view-as");
+    const u = await demoSignInTarget(await idOf("hrhead@demo.wct.my"));
+    expect(u.email).toBe("hrhead@demo.wct.my");
+    const { recordDemoSignIn } = await import("@/lib/services/view-as");
+    await recordDemoSignIn(u, "10.0.0.5");
+    const rows = await db.select().from(adminAuditLogs).where(eq(adminAuditLogs.actorId, u.id));
+    expect(rows.map((r) => r.change)).toContainEqual({ op: "demo-sign-in", ip: "10.0.0.5" });
+  });
+
+  it("refuses real staff, inactive demo accounts and unknown ids", async () => {
+    const { demoSignInTarget } = await import("@/lib/services/view-as");
+    const [real] = await db.insert(users).values({ email: "real.person@wct.my", name: "Real Person" }).returning();
+    await expect(demoSignInTarget(real.id)).rejects.toThrow("Only demo accounts can be used here.");
+    const hod = await idOf("hod.land@demo.wct.my");
+    await db.update(users).set({ isActive: false }).where(eq(users.id, hod));
+    await expect(demoSignInTarget(hod)).rejects.toThrow("Only demo accounts can be used here.");
+    await expect(demoSignInTarget("not-a-uuid")).rejects.toThrow("Only demo accounts can be used here.");
   });
 });

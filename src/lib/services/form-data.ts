@@ -3,23 +3,19 @@ import type { CurrentUser } from "@/lib/auth/load-user";
 import type { RequestDetail } from "./requests";
 import { listDepartmentsWithBu } from "./requests";
 import { db } from "@/db";
-import { businessUnitAdmins, users } from "@/db/schema";
-import { and, eq } from "drizzle-orm";
+import { users } from "@/db/schema";
+import { eq } from "drizzle-orm";
+import { buAdminNames, worldOf } from "./parties";
 
 /** Data the request form needs about the signed-in requester. */
 export async function requesterContext(user: CurrentUser) {
   let hodName: string | null = null;
   if (user.department?.hodUserId) {
-    const [h] = await db.select({ name: users.name, isActive: users.isActive }).from(users).where(eq(users.id, user.department.hodUserId));
-    hodName = h?.isActive ? h.name : null;
+    const [h] = await db.select({ name: users.name, email: users.email, isActive: users.isActive }).from(users).where(eq(users.id, user.department.hodUserId));
+    // Demo and real staff never mix: a demo HOD isn't shown to real staff, and vice versa.
+    hodName = h?.isActive && worldOf(h.email) === worldOf(user.email) ? h.name : null;
   }
-  const buAdmins = user.businessUnit
-    ? await db
-        .select({ name: users.name })
-        .from(businessUnitAdmins)
-        .innerJoin(users, eq(businessUnitAdmins.userId, users.id))
-        .where(and(eq(businessUnitAdmins.businessUnitId, user.businessUnit.id), eq(users.isActive, true)))
-    : [];
+  const names = await buAdminNames(db, user.businessUnit?.id ?? null, worldOf(user.email));
   const depts = await listDepartmentsWithBu();
   return {
     requester: {
@@ -27,7 +23,7 @@ export async function requesterContext(user: CurrentUser) {
       department: user.department?.name ?? null,
       businessUnit: user.businessUnit?.name ?? null,
       hodName,
-      buAdminNames: buAdmins.length ? buAdmins.map((b) => b.name).join(", ") : null,
+      buAdminNames: names,
     },
     departments: depts.map((d) => ({ id: d.id, name: d.name, buName: d.buName })),
   };

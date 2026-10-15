@@ -44,18 +44,25 @@ You approve or reject requests from your business unit after the Department HOD 
 ## HR / L&D: history and analytics
 
 - **Training RQ History:** search by ref no., title, requester, provider or **candidate name**. Searching a staff name shows that employee's training history. Filter by status, BU, department, type, HRD Corp and dates, then click **Export to Excel**.
-- **Analytics** (bottom of the dashboard): requests and approved spend by month, business unit and department; planned vs ad hoc; and the average time requests spend at each approval step. Choose the year and export to Excel.
+- **Overview & analytics** (top of the dashboard, in one bar with your own counters): requests and approved spend by month, business unit and department; planned vs ad hoc; and the average time requests spend at each approval step. Choose the year and export to Excel.
 
-## System Admins
+## L&D Team and System Admins
+
+The L&D Team manages every training requisition, so L&D members have full System Admin access. The System Admin role stays for IT support.
 
 **Admin settings** lets you manage:
 
 - Business units and BU Admins
-- Departments and their HODs
-- Roles (L&D Team, HR Head, System Admin)
+- Head of Departments (each department and its HOD)
+- Roles (L&D Team (System Admin), HR Head, System Admin)
 - Users: fix departments, deactivate leavers, pre-register new HODs
 - Notification log, with **Retry** for failed sends
-- Audit log of every settings change
-- **View as demo user** (your user menu): see the system exactly as a demo Requester, HOD, BU Admin, L&D or HR Head. A banner shows who you're viewing as; click **Exit** to return. Only `@demo.wct.my` accounts can be viewed, and every switch is in the audit log.
+- **View as demo user** (your user menu): see the system exactly as a demo Requester, HOD, BU Admin, L&D or HR Head. A banner shows who you're viewing as; click **Exit** to return. Only `@demo.wct.my` accounts can be viewed.
+
+Settings changes are still recorded in the database for security, but there is no audit log screen.
+
+## Demo accounts (stakeholder trial)
+
+While the trial is on, the sign-in page lists demo accounts under **Try a demo account**, grouped by role. Pick one to see that role's screens. A banner shows which demo account you're using; **Switch account** takes you back to pick another. Demo accounts only see demo requests, and Admin settings are read-only for them.
 
 Changes apply immediately. For example, a newly assigned HOD sees pending requests from their department straight away.

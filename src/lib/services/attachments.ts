@@ -4,8 +4,9 @@ import { mkdir, readFile, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { and, count, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { attachments, trainingRequests, type Attachment } from "@/db/schema";
+import { attachments, trainingRequests, users, type Attachment } from "@/db/schema";
 import type { CurrentUser } from "@/lib/auth/load-user";
+import { isDemoUser } from "@/lib/auth/roles";
 import { env } from "@/lib/env";
 import { canEditContent, canView, type RequestRef } from "@/lib/workflow";
 import { extensionOf, mimeTypeFor, sanitizeFilename, sniffOk, validateUpload, type AttachmentKind } from "./attachment-rules";
@@ -17,10 +18,17 @@ function storagePath(storedName: string) {
   return path.resolve(env.UPLOAD_DIR, storedName);
 }
 
-async function loadRequestRef(id: string): Promise<RequestRef | null> {
+/** The request as `user` may see it: null when missing, not visible, or a real request seen by a demo account. */
+async function loadRequestRef(user: CurrentUser, id: string): Promise<RequestRef | null> {
   if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
-  const [r] = await db.select().from(trainingRequests).where(eq(trainingRequests.id, id));
-  return r ?? null;
+  const [row] = await db
+    .select({ r: trainingRequests, requesterEmail: users.email })
+    .from(trainingRequests)
+    .innerJoin(users, eq(trainingRequests.requesterId, users.id))
+    .where(eq(trainingRequests.id, id));
+  if (!row || !canView(row.r, user.actor)) return null;
+  if (isDemoUser(user) && !isDemoUser({ email: row.requesterEmail })) return null;
+  return row.r;
 }
 
 export async function saveAttachment(
@@ -29,8 +37,8 @@ export async function saveAttachment(
   file: { name: string; type: string; bytes: Uint8Array },
   kind: AttachmentKind = "SUPPORTING",
 ): Promise<Attachment> {
-  const r = await loadRequestRef(requestId);
-  if (!r || !canView(r, user.actor)) throw new NotFoundError();
+  const r = await loadRequestRef(user, requestId);
+  if (!r) throw new NotFoundError();
   if (!canEditContent(r, user.actor)) throw new ServiceError("Attachments can only be changed while the request is a draft or returned.", 403);
 
   const [{ n }] = await db
@@ -67,8 +75,8 @@ async function loadAuthorised(user: CurrentUser, attachmentId: string) {
   if (!/^[0-9a-f-]{36}$/i.test(attachmentId)) return null;
   const [att] = await db.select().from(attachments).where(eq(attachments.id, attachmentId));
   if (!att) return null;
-  const r = await loadRequestRef(att.requestId);
-  if (!r || !canView(r, user.actor)) return null;
+  const r = await loadRequestRef(user, att.requestId);
+  if (!r) return null;
   return { att, r };
 }
 

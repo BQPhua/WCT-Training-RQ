@@ -1,6 +1,7 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { requireApiUser } from "@/lib/auth/current-user";
+import { isDemoUser, isSystemAdmin } from "@/lib/auth/roles";
 import { toActionError, type ActionResult } from "@/lib/action-result";
 import { assignRole, createUser, revokeRole, setBusinessUnitAdmins, updateUser, upsertBusinessUnit, upsertDepartment } from "@/lib/services/admin";
 import { deliver } from "@/lib/notify/send";
@@ -40,7 +41,7 @@ export async function createUserAction(input: { email: string; name: string; dep
 export async function retryNotificationAction(logId: string) {
   return run(async () => {
     const user = await requireApiUser();
-    if (!user.actor.roles.includes("SYS_ADMIN")) throw new Error("forbidden");
+    if (!isSystemAdmin(user) || isDemoUser(user)) throw new Error("forbidden");
     await deliver(logId);
   });
 }

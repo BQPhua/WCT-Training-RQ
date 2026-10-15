@@ -18,6 +18,14 @@ export function isDevLoginEnabled(): boolean {
   return process.env.NODE_ENV !== "production" && process.env.AUTH_DEV_LOGIN === "true";
 }
 
+/**
+ * Demo-account sign-in on the sign-in page. On in development with dev sign-in,
+ * and in production only when the server sets DEMO_LOGIN=true (stakeholder trial).
+ */
+export function isDemoLoginEnabled(): boolean {
+  return isDevLoginEnabled() || process.env.DEMO_LOGIN === "true";
+}
+
 function required(name: string): string {
   const v = process.env[name];
   if (!v) throw new Error(`Missing required environment variable ${name}`);

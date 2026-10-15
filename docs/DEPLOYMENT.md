@@ -79,6 +79,7 @@ Fill in every value:
 | `UPLOAD_DIR` | `/var/lib/wct-training-rq/uploads` |
 | `BOOTSTRAP_ADMIN_EMAILS` | your own email, so you become System Admin on first sign-in |
 | `AUTH_DEV_LOGIN` | `false` |
+| `DEMO_LOGIN` | `true` only during the stakeholder trial: the sign-in page then lists the demo accounts. Remove it (or set `false`) at go-live. |
 
 ## 5. First deploy
 
@@ -94,7 +95,10 @@ curl http://127.0.0.1:3110/WCT-Training-RQ/api/health  # {"ok":true,"db":true}
 > - It adds 12 demo people (`@demo.wct.my`), 7 demo departments and about 30 requests in every status. No emails are sent.
 > - Load it **before** you create real departments.
 > - **Go-live order:** first assign the real BU Admins (Land, E&C, Malls), L&D Team and HR Head in **Admin settings**, then run `… demo-data.sh remove`. Removing the demo data also removes the demo BU Admins, and requests can't be submitted while a business unit has no BU Admin.
-> - Until then, demo L&D, HR Head and BU Admin accounts are included in real notifications. While viewing as a demo user, a System Admin can only act on demo requests.
+> - Demo and real staff never mix: demo requests are routed and emailed only to demo accounts, and real requests only to real staff. A real request therefore needs a real BU Admin for its business unit, and real approvers handle demo requests only through **View as demo user**.
+> - Demo accounts only ever see and act on requests raised by demo accounts (lists, dashboard, analytics, exports, request pages, files), and Admin settings are read-only for them, listing demo accounts only.
+> - **Demo sign-in for stakeholders:** add `DEMO_LOGIN=true` to `shared/.env`, then `sudo -iu trq pm2 reload wct-training-rq --update-env`. The sign-in page shows "Try a demo account" with one button per demo person, grouped by role.
+> - **At go-live:** remove `DEMO_LOGIN` from `shared/.env` and reload **first**, then assign real role holders, then run `demo-data.sh remove`.
 > - Removal deletes only demo records, and reference numbers continue from the highest real one.
 
 ## 6. Nginx
@@ -151,7 +155,7 @@ Runner service: `sudo systemctl status 'actions.runner.*wct-hrform01-trq*'`. To 
 
 The sign-in button shows Microsoft's logo when `public/brand/microsoft-logo.svg` exists in the repository. The file isn't shipped with the code; add Microsoft's official asset yourself:
 
-1. Download the "Sign in with Microsoft" logo (SVG) from Microsoft's identity platform branding guidelines on learn.microsoft.com.
+1. Open Microsoft's branding guidelines for apps: <https://learn.microsoft.com/entra/identity-platform/howto-add-branding-in-apps>. Download the official logo files from that page, and take the four-square Microsoft logo SVG from the download.
 2. In GitHub, open the repository, go to the `public/brand` folder and choose **Add file → Upload files**. Name the file `microsoft-logo.svg` and commit it to `main`.
 3. Auto-deploy publishes it.
 
