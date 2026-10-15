@@ -76,3 +76,9 @@ export async function hrHeadNames(tx: Tx): Promise<string | null> {
   const list = await roleHolders(tx, "HR_HEAD");
   return list.length ? list.map((p) => p.name).join(", ") : null;
 }
+
+/** Display names of the active BU Admin(s) of a business unit, for trackers and hints. */
+export async function buAdminNames(tx: Tx, businessUnitId: string | null): Promise<string | null> {
+  const list = await buAdminsOf(tx, businessUnitId);
+  return list.length ? list.map((p) => p.name).join(", ") : null;
+}

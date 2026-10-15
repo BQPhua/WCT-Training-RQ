@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CalendarDays, Clock, FileText, MapPin, Pencil, Printer, Presentation, Wallet } from "lucide-react";
+import { CalendarDays, Clock, FileSpreadsheet, FileText, MapPin, Pencil, Printer, Presentation, Wallet } from "lucide-react";
 import { db } from "@/db";
 import { ActionPanel } from "@/components/request-detail/action-panel";
 import { CloneButton } from "@/components/request-detail/clone-button";
@@ -16,8 +16,8 @@ import { Panel, PanelBody, PanelHeader } from "@/components/ui/panel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { requireUser } from "@/lib/auth/current-user";
 import { BASE_PATH } from "@/lib/env";
-import { formatDateRange, formatDateTimeMY, formatMYR, formatTime12, totalFees } from "@/lib/format";
-import { hrHeadNames } from "@/lib/services/parties";
+import { effectiveParticipants, formatDateRange, formatDateTimeMY, formatMYR, formatTime12, totalFees } from "@/lib/format";
+import { buAdminNames, hrHeadNames } from "@/lib/services/parties";
 import { getRequestForUser } from "@/lib/services/requests";
 import { buildStations } from "@/lib/services/tracker";
 import { canComment, canEditContent, canEditLndFields, getAllowedActions, STAGE_LABEL, stageOf } from "@/lib/workflow";
@@ -47,9 +47,12 @@ export default async function RequestDetailPage({ params, searchParams }: PagePr
 
   const r = d.request;
   const actions = getAllowedActions(r, user.actor, d.counts);
-  const stations = buildStations(d, { hod: d.department?.hod?.name ?? null, hr: await hrHeadNames(db) });
+  const stations = buildStations(d, { hod: d.department?.hod?.name ?? null, bu: await buAdminNames(db, r.businessUnitId), hr: await hrHeadNames(db) });
   const stage = stageOf(r.status);
-  const total = totalFees(r.feePerPax, d.candidates.length);
+  const participants = effectiveParticipants(r, d.candidates.length);
+  const total = totalFees(r.feePerPax, participants);
+  const nameList = d.attachments.find((a) => a.kind === "NAME_LIST") ?? null;
+  const supporting = d.attachments.filter((a) => a.kind !== "NAME_LIST");
   const showLnd = r.status !== "DRAFT";
 
   return (
@@ -83,6 +86,11 @@ export default async function RequestDetailPage({ params, searchParams }: PagePr
             </Button>
           )}
           <CloneButton requestId={r.id} />
+          <Button asChild variant="outline">
+            <a href={`${BASE_PATH}/api/requests/${r.id}/xlsx`}>
+              <FileSpreadsheet /> Export to Excel
+            </a>
+          </Button>
           <Button asChild variant="primary">
             <a href={`${BASE_PATH}/api/requests/${r.id}/pdf`} target="_blank" rel="noopener">
               <Printer /> Print PDF
@@ -105,14 +113,14 @@ export default async function RequestDetailPage({ params, searchParams }: PagePr
             <PanelHeader title="Training program" />
             <PanelBody className="space-y-5">
               <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                <Fact icon={CalendarDays} label="Date(s)">{formatDateRange(r.startDate, r.endDate)}</Fact>
+                <Fact icon={CalendarDays} label="Training Dates">{formatDateRange(r.startDate, r.endDate)}</Fact>
                 <Fact icon={Clock} label="Time">{`${formatTime12(r.startTime)} – ${formatTime12(r.endTime)}`}</Fact>
                 <Fact icon={MapPin} label="Venue">{r.venue ?? "—"}</Fact>
                 <Fact icon={Presentation} label="Conducted by">{r.conductedBy ?? "—"}</Fact>
                 <Fact icon={Wallet} label="Fees">
                   {formatMYR(total)}
                   <span className="block text-xs font-normal text-muted">
-                    ({d.candidates.length} × {formatMYR(r.feePerPax)})
+                    ({participants} × {formatMYR(r.feePerPax)})
                   </span>
                 </Fact>
               </dl>
@@ -122,18 +130,37 @@ export default async function RequestDetailPage({ params, searchParams }: PagePr
                   <p className="mt-1 max-w-[70ch] whitespace-pre-wrap text-sm leading-relaxed text-ink">{r.objective}</p>
                 </div>
               )}
+              {r.relevancy && (
+                <div>
+                  <h3 className="text-xs text-muted">Relevancy</h3>
+                  <p className="mt-1 max-w-[70ch] whitespace-pre-wrap text-sm leading-relaxed text-ink">{r.relevancy}</p>
+                </div>
+              )}
             </PanelBody>
           </Panel>
 
           <Panel>
-            <PanelHeader title="Proposed candidates" description={`${d.candidates.length} of 8`} />
+            <PanelHeader
+              title="Proposed candidates"
+              description={nameList ? `${participants} participants · name list` : `${d.candidates.length} of 8`}
+            />
+            {nameList && (
+              <a href={`${BASE_PATH}/api/attachments/${nameList.id}`} className="flex items-center gap-3 border-b border-line px-5 py-3.5 text-sm hover:bg-surface-2">
+                <FileSpreadsheet className="size-5 shrink-0 text-approved" />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate font-medium text-ink">{nameList.originalName}</span>
+                  <span className="block text-xs text-muted">Participant name list · {participants} participants</span>
+                </span>
+                <span className="text-xs tabular text-muted">{formatBytes(nameList.sizeBytes)}</span>
+              </a>
+            )}
             <ol className="grid sm:grid-cols-2">
               {d.candidates.map((c, i) => (
                 <li key={c.id} className="flex items-center gap-3 border-b border-line px-5 py-3 sm:odd:border-r">
                   <span className="w-5 text-xs font-semibold tabular text-muted">{i + 1}</span>
                   <span className="min-w-0">
                     <span className="block truncate text-sm font-medium text-ink">{c.name}</span>
-                    <span className="block truncate text-xs text-muted">{[c.jobTitle, c.department, c.staffNo && `Staff no. ${c.staffNo}`].filter(Boolean).join(" · ") || c.email || "Added manually"}</span>
+                    {(c.jobTitle || c.department) && <span className="block truncate text-xs text-muted">{[c.jobTitle, c.department].filter(Boolean).join(" · ")}</span>}
                   </span>
                 </li>
               ))}
@@ -192,9 +219,9 @@ export default async function RequestDetailPage({ params, searchParams }: PagePr
 
           <Panel>
             <PanelHeader title="Attachments" />
-            {d.attachments.length ? (
+            {supporting.length ? (
               <ul className="divide-y divide-line">
-                {d.attachments.map((a) => (
+                {supporting.map((a) => (
                   <li key={a.id}>
                     <a href={`${BASE_PATH}/api/attachments/${a.id}`} className="flex items-center gap-3 px-5 py-3 text-sm hover:bg-surface-2">
                       <FileText className="size-4 shrink-0 text-muted" />

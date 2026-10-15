@@ -8,6 +8,7 @@ export function toneOf(status: Status): Tone {
     case "APPROVED":
       return "approved";
     case "PENDING_HOD":
+    case "PENDING_BU":
     case "PENDING_LND":
     case "PENDING_HR":
       return "pending";
