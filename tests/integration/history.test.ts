@@ -67,9 +67,10 @@ describe("exportHistoryXlsx", () => {
     await wb.xlsx.load(buf as never);
     const ws = wb.getWorksheet("Training Requests")!;
     expect((ws.getRow(1).values as string[]).slice(1)).toEqual([
-      "Ref No", "Status", "Requester", "Department", "Business Unit", "Type", "Title", "Start", "End",
-      "Fee/Pax", "Candidates", "Total Fees", "HRD Corp", "Submitted", "Finalised",
+      "Ref No", "Status", "Requester", "Department", "Business Unit", "Type", "Title", "Training Start", "Training End",
+      "Fee/Pax", "Participants", "Total Fees", "HRD Corp", "Submitted", "Finalised",
     ]);
+    expect((wb.getWorksheet("Candidates")!.getRow(1).values as string[]).slice(1)).not.toContain("Staff No");
     expect(ws.rowCount).toBe(2);
     expect(wb.getWorksheet("Candidates")!.rowCount).toBe(3);
   });

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowRight, Inbox, Plus } from "lucide-react";
+import { Analytics, analyticsYear } from "@/components/dashboard/analytics";
 import { AvailabilityBoard } from "@/components/dashboard/availability-board";
 import { StatusBadge } from "@/components/status";
 import { Button } from "@/components/ui/button";
@@ -14,7 +15,7 @@ import {
 } from "@/lib/format";
 import { yearInMY } from "@/lib/format";
 import { getDashboard } from "@/lib/services/dashboard";
-import { STAGE_LABEL, type Stage } from "@/lib/workflow";
+import { canSeeReports } from "@/lib/services/reports";
 
 export const metadata = { title: "Dashboard" };
 
@@ -33,7 +34,7 @@ const ACTION_TEXT: Record<string, string> = {
   SUBMIT: "submitted",
   RESUBMIT: "resubmitted",
   APPROVE: "approved",
-  REJECT: "sent back",
+  REJECT: "returned to the requester",
   CANCEL: "cancelled",
   EDIT_LND_FIELDS: "updated L&D details on",
 };
@@ -111,7 +112,7 @@ export default async function DashboardPage({
         </div>
         <Button asChild variant="brand" size="lg">
           <Link href="/requests/new">
-            <Plus /> New training request
+            <Plus /> New Training Requisition
           </Link>
         </Button>
       </div>
@@ -169,9 +170,6 @@ export default async function DashboardPage({
                       </span>
                       <span className="text-muted">
                         {ACTION_TEXT[a.action] ?? a.action.toLowerCase()}
-                        {a.action === "REJECT" && a.sentBackTo
-                          ? ` to ${STAGE_LABEL[a.sentBackTo as Stage]}`
-                          : ""}
                       </span>
                       <Link
                         href={`/requests/${a.requestId}`}
@@ -278,6 +276,8 @@ export default async function DashboardPage({
           </Panel>
         </div>
       </div>
+
+      {canSeeReports(user) && <Analytics user={user} year={analyticsYear(sp.year)} />}
     </div>
   );
 }

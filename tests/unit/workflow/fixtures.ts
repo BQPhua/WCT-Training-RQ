@@ -15,7 +15,7 @@ export const buAdminLand: Actor = { id: "u-bua", roles: [], hodDepartmentIds: []
 export const buAdminMalls: Actor = { id: "u-bua-m", roles: [], hodDepartmentIds: [], buAdminBusinessUnitIds: [BU_MALLS] };
 export const stranger: Actor = { id: "u-x", roles: [], hodDepartmentIds: [], buAdminBusinessUnitIds: [] };
 
-export const counts: RoleHolderCounts = { lnd: 2, hrHead: 1 };
+export const counts: RoleHolderCounts = { lnd: 2, hrHead: 1, buAdmin: 1 };
 
 export function req(status: RequestRef["status"], over: Partial<RequestRef> = {}): RequestRef {
   return { status, requesterId: requester.id, departmentId: DEPT_LAND, businessUnitId: BU_LAND, ...over };
@@ -36,4 +36,5 @@ export const parties: Parties = {
   lnd: [P.lnd1, P.lnd2],
   hrHeads: [P.hr],
   buAdmins: [P.bua],
+  roundApprovers: [],
 };

@@ -66,7 +66,7 @@ async function whereFor(user: CurrentUser, f: HistoryFilters): Promise<SQL> {
   const parts: SQL[] = [visibleRequestsWhere(user)];
   if (f.scope === "mine") parts.push(eq(tr.requesterId, user.id));
   if (f.scope === "approvals") parts.push(await approvalsWhere(user));
-  if (f.status === "OPEN") parts.push(inArray(tr.status, ["PENDING_HOD", "PENDING_LND", "PENDING_HR", "RETURNED"]));
+  if (f.status === "OPEN") parts.push(inArray(tr.status, ["PENDING_HOD", "PENDING_BU", "PENDING_LND", "PENDING_HR", "RETURNED"]));
   else if (f.status) parts.push(eq(tr.status, f.status));
   if (f.buId) parts.push(eq(tr.businessUnitId, f.buId));
   if (f.departmentId) parts.push(eq(tr.departmentId, f.departmentId));
@@ -139,7 +139,7 @@ export async function exportHistoryXlsx(user: CurrentUser, f: HistoryFilters): P
   const rows = await baseSelect().where(where).orderBy(desc(tr.updatedAt)).limit(5000);
   const cands = rows.length
     ? await db
-        .select({ requestId: candidates.requestId, sortOrder: candidates.sortOrder, name: candidates.name, email: candidates.email, staffNo: candidates.staffNo, department: candidates.department })
+        .select({ requestId: candidates.requestId, sortOrder: candidates.sortOrder, name: candidates.name, email: candidates.email, department: candidates.department })
         .from(candidates)
         .where(inArray(candidates.requestId, rows.map((r) => r.id)))
         .orderBy(asc(candidates.requestId), asc(candidates.sortOrder))
@@ -158,10 +158,10 @@ export async function exportHistoryXlsx(user: CurrentUser, f: HistoryFilters): P
     { header: "Business Unit", key: "bu", width: 14 },
     { header: "Type", key: "type", width: 10 },
     { header: "Title", key: "title", width: 44 },
-    { header: "Start", key: "start", width: 12 },
-    { header: "End", key: "end", width: 12 },
+    { header: "Training Start", key: "start", width: 14 },
+    { header: "Training End", key: "end", width: 14 },
     { header: "Fee/Pax", key: "fee", width: 12, style: { numFmt: "#,##0.00" } },
-    { header: "Candidates", key: "cands", width: 11 },
+    { header: "Participants", key: "cands", width: 12 },
     { header: "Total Fees", key: "total", width: 14, style: { numFmt: "#,##0.00" } },
     { header: "HRD Corp", key: "hrdc", width: 10 },
     { header: "Submitted", key: "submitted", width: 20 },
@@ -196,14 +196,13 @@ export async function exportHistoryXlsx(user: CurrentUser, f: HistoryFilters): P
     { header: "#", key: "n", width: 5 },
     { header: "Candidate", key: "name", width: 30 },
     { header: "Email", key: "email", width: 30 },
-    { header: "Staff No", key: "staff", width: 12 },
     { header: "Department", key: "dept", width: 26 },
     { header: "Training", key: "title", width: 44 },
     { header: "Status", key: "status", width: 16 },
   ];
   for (const c of cands) {
     const r = refById.get(c.requestId)!;
-    cs.addRow({ ref: r.refNo ?? "Draft", n: c.sortOrder, name: c.name, email: c.email ?? "", staff: c.staffNo ?? "", dept: c.department ?? "", title: r.title, status: STATUS_LABEL[r.status] });
+    cs.addRow({ ref: r.refNo ?? "Draft", n: c.sortOrder, name: c.name, email: c.email ?? "", dept: c.department ?? "", title: r.title, status: STATUS_LABEL[r.status] });
   }
   cs.getRow(1).font = { bold: true, color: { argb: "FFFFFFFF" } };
   cs.getRow(1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF1E3A5F" } };

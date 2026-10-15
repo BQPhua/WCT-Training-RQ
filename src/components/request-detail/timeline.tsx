@@ -1,7 +1,7 @@
 import { Ban, Check, CornerUpLeft, FilePlus2, PencilLine, Send, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDateTimeMY } from "@/lib/format";
-import { STAGE_LABEL, STATUS_LABEL, type Stage, type Status } from "@/lib/workflow";
+import { STATUS_LABEL, type Status } from "@/lib/workflow";
 
 export interface TimelineAction {
   id: string;
@@ -21,12 +21,12 @@ const META: Record<string, { icon: typeof Check; tone: string; verb: string }> =
   SUBMIT: { icon: Send, tone: "bg-shell text-shell-fg", verb: "submitted the request" },
   RESUBMIT: { icon: Send, tone: "bg-shell text-shell-fg", verb: "resubmitted the request" },
   APPROVE: { icon: Check, tone: "bg-approved text-white", verb: "approved" },
-  REJECT: { icon: CornerUpLeft, tone: "bg-returned text-white", verb: "rejected and sent back" },
+  REJECT: { icon: CornerUpLeft, tone: "bg-returned text-white", verb: "rejected and returned it to the requester" },
   CANCEL: { icon: Ban, tone: "bg-cancelled text-white", verb: "cancelled the request" },
   EDIT_LND_FIELDS: { icon: PencilLine, tone: "bg-brand-soft text-brand-text", verb: "updated the L&D details" },
 };
 
-const STAGE_OF_FROM: Partial<Record<Status, string>> = { PENDING_HOD: "Department HOD", PENDING_LND: "L&D", PENDING_HR: "HR Head" };
+const STAGE_OF_FROM: Partial<Record<Status, string>> = { PENDING_HOD: "Department HOD", PENDING_BU: "BU Admin", PENDING_LND: "L&D", PENDING_HR: "HR Head" };
 
 export function Timeline({ actions }: { actions: TimelineAction[] }) {
   return (
@@ -44,7 +44,7 @@ export function Timeline({ actions }: { actions: TimelineAction[] }) {
               <p className="text-sm text-ink">
                 <span className="font-semibold">{a.actor.name}</span> {m.verb}
                 {a.action === "APPROVE" && a.fromStatus && STAGE_OF_FROM[a.fromStatus] ? ` as ${STAGE_OF_FROM[a.fromStatus]}` : ""}
-                {a.action === "REJECT" && a.sentBackTo ? ` to ${STAGE_LABEL[a.sentBackTo as Stage]}` : ""}
+                {a.action === "REJECT" && a.fromStatus && STAGE_OF_FROM[a.fromStatus] ? ` as ${STAGE_OF_FROM[a.fromStatus]}` : ""}
                 {a.selfApproved && <span className="ml-2 rounded bg-brand-soft px-1.5 py-0.5 text-[11px] font-medium text-brand-text">Self-approved</span>}
               </p>
               <p className="mt-0.5 text-xs tabular text-muted">

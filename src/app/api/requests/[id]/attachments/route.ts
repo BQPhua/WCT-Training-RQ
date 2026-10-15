@@ -10,8 +10,9 @@ export async function POST(req: NextRequest, ctx: RouteContext<"/api/requests/[i
     const form = await req.formData();
     const file = form.get("file");
     if (!(file instanceof File)) return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
-    const att = await saveAttachment(user, id, { name: file.name, type: file.type, bytes: new Uint8Array(await file.arrayBuffer()) });
-    return NextResponse.json({ id: att.id, originalName: att.originalName, sizeBytes: att.sizeBytes, mimeType: att.mimeType });
+    const kind = form.get("kind") === "NAME_LIST" ? "NAME_LIST" : "SUPPORTING";
+    const att = await saveAttachment(user, id, { name: file.name, type: file.type, bytes: new Uint8Array(await file.arrayBuffer()) }, kind);
+    return NextResponse.json({ id: att.id, kind: att.kind, originalName: att.originalName, sizeBytes: att.sizeBytes, mimeType: att.mimeType });
   } catch (e) {
     return apiError(e);
   }

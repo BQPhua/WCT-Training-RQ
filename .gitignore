@@ -53,3 +53,4 @@ uploads/
 .next-prev/
 .next-failed/
 .next-prod/
+_pw.config.ts

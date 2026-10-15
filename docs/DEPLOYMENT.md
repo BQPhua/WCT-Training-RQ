@@ -93,7 +93,8 @@ curl http://127.0.0.1:3110/WCT-Training-RQ/api/health  # {"ok":true,"db":true}
 > **Sample data for a trial run** (optional): `sudo -iu trq /opt/wct-training-rq/current/scripts/demo-data.sh load`
 > - It adds 12 demo people (`@demo.wct.my`), 7 demo departments and about 30 requests in every status. No emails are sent.
 > - Load it **before** you create real departments.
-> - **Remove it before go-live** with `… demo-data.sh remove`. Otherwise the demo L&D, HR Head and BU Admin accounts would be included in real notifications.
+> - **Go-live order:** first assign the real BU Admins (Land, E&C, Malls), L&D Team and HR Head in **Admin settings**, then run `… demo-data.sh remove`. Removing the demo data also removes the demo BU Admins, and requests can't be submitted while a business unit has no BU Admin.
+> - Until then, demo L&D, HR Head and BU Admin accounts are included in real notifications. While viewing as a demo user, a System Admin can only act on demo requests.
 > - Removal deletes only demo records, and reference numbers continue from the highest real one.
 
 ## 6. Nginx
@@ -145,6 +146,16 @@ Runner service: `sudo systemctl status 'actions.runner.*wct-hrform01-trq*'`. To 
    - Create the **departments**, named exactly as in Microsoft 365, and set each **HOD**. Use **Users → Add user** for HODs who haven't signed in yet.
 3. In **Admin settings → Roles**, add the **L&D Team** members, the **HR Head** and other System Admins.
 4. Raise a test request end to end. Check that the emails arrive and the PDF prints correctly.
+
+## Microsoft icon on the sign-in button
+
+The sign-in button shows Microsoft's logo when `public/brand/microsoft-logo.svg` exists in the repository. The file isn't shipped with the code; add Microsoft's official asset yourself:
+
+1. Download the "Sign in with Microsoft" logo (SVG) from Microsoft's identity platform branding guidelines on learn.microsoft.com.
+2. In GitHub, open the repository, go to the `public/brand` folder and choose **Add file → Upload files**. Name the file `microsoft-logo.svg` and commit it to `main`.
+3. Auto-deploy publishes it.
+
+Until the file is there, the button shows a key icon.
 
 ## Release checklist (each deploy)
 

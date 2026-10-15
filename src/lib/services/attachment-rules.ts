@@ -1,5 +1,7 @@
 export const MAX_ATTACHMENTS = 5;
-export const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
+export const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024;
+
+export type AttachmentKind = "SUPPORTING" | "NAME_LIST";
 
 export const ALLOWED_TYPES: Record<string, string> = {
   pdf: "application/pdf",
@@ -10,6 +12,18 @@ export const ALLOWED_TYPES: Record<string, string> = {
   jpeg: "image/jpeg",
 };
 export const ACCEPT_ATTR = ".pdf,.docx,.xlsx,.png,.jpg,.jpeg";
+
+/** Participant name list (used instead of typed names when there are more than 8 people). */
+export const NAME_LIST_TYPES: Record<string, string> = {
+  xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  xls: "application/vnd.ms-excel",
+  csv: "text/csv",
+};
+export const NAME_LIST_ACCEPT_ATTR = ".xlsx,.xls,.csv";
+
+export function mimeTypeFor(ext: string, kind: AttachmentKind): string {
+  return (kind === "NAME_LIST" ? NAME_LIST_TYPES : ALLOWED_TYPES)[ext];
+}
 
 export function extensionOf(name: string): string {
   const m = /\.([a-z0-9]+)$/i.exec(name);
@@ -28,11 +42,23 @@ export function sanitizeFilename(name: string): string {
   return base;
 }
 
-export function validateUpload(file: { name: string; size: number }, existingCount: number): string | null {
-  if (existingCount >= MAX_ATTACHMENTS) return `Maximum ${MAX_ATTACHMENTS} attachments`;
-  if (!ALLOWED_TYPES[extensionOf(file.name)]) return "File type not allowed";
+/**
+ * `existingCount` is the number of supporting documents already attached; it is
+ * ignored for a name list, which replaces any previous one.
+ */
+export function validateUpload(
+  file: { name: string; size: number },
+  existingCount: number,
+  kind: AttachmentKind = "SUPPORTING",
+): string | null {
+  if (kind === "NAME_LIST") {
+    if (!NAME_LIST_TYPES[extensionOf(file.name)]) return "Name list must be an Excel or CSV file";
+  } else {
+    if (existingCount >= MAX_ATTACHMENTS) return `Maximum ${MAX_ATTACHMENTS} attachments`;
+    if (!ALLOWED_TYPES[extensionOf(file.name)]) return "File type not allowed";
+  }
   if (file.size <= 0) return "File is empty";
-  if (file.size > MAX_ATTACHMENT_BYTES) return "File exceeds 10 MB";
+  if (file.size > MAX_ATTACHMENT_BYTES) return "File exceeds 5 MB";
   return null;
 }
 
@@ -51,6 +77,10 @@ export function sniffOk(ext: string, bytes: Uint8Array): boolean {
     case "docx":
     case "xlsx":
       return startsWith(bytes, [0x50, 0x4b, 0x03, 0x04]); // ZIP container
+    case "xls":
+      return startsWith(bytes, [0xd0, 0xcf, 0x11, 0xe0]); // OLE2 compound file
+    case "csv":
+      return !bytes.subarray(0, 4096).includes(0); // plain text: no NUL bytes
     default:
       return false;
   }

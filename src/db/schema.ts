@@ -20,6 +20,7 @@ import {
 export const requestStatusEnum = pgEnum("request_status", [
   "DRAFT",
   "PENDING_HOD",
+  "PENDING_BU",
   "PENDING_LND",
   "PENDING_HR",
   "RETURNED",
@@ -130,11 +131,14 @@ export const trainingRequests = pgTable(
     trainingType: trainingTypeEnum("training_type"),
     title: text("title").notNull(),
     objective: text("objective"),
+    relevancy: text("relevancy"),
     startDate: date("start_date"),
     endDate: date("end_date"),
     startTime: text("start_time"),
     endTime: text("end_time"),
     feePerPax: numeric("fee_per_pax", { precision: 12, scale: 2 }),
+    /** Typed-name count, or the number entered for an attached name list. */
+    participantCount: integer("participant_count"),
     venue: text("venue"),
     conductedBy: text("conducted_by"),
     hrdcClaimable: boolean("hrdc_claimable"),
@@ -233,6 +237,8 @@ export const attachments = pgTable(
       .references(() => trainingRequests.id, { onDelete: "cascade" }),
     originalName: text("original_name").notNull(),
     storedName: text("stored_name").notNull().unique(),
+    /** SUPPORTING (brochure, quotation) or NAME_LIST (participant list for > 8 people). */
+    kind: text("kind").notNull().default("SUPPORTING"),
     mimeType: text("mime_type").notNull(),
     sizeBytes: integer("size_bytes").notNull(),
     uploadedById: uuid("uploaded_by_id")

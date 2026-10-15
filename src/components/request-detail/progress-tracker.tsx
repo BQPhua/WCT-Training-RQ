@@ -1,3 +1,4 @@
+import type * as React from "react";
 import { Check, CornerUpLeft, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDateTimeMY } from "@/lib/format";
@@ -14,7 +15,11 @@ export interface TrackerStation {
 /** A transit-line tracker: stations fill as the request moves along. */
 export function ProgressTracker({ stations, status }: { stations: TrackerStation[]; status: Status }) {
   return (
-    <ol className="grid grid-cols-1 gap-0 sm:grid-cols-5" aria-label="Approval progress">
+    <ol
+      className="grid grid-cols-1 gap-0 sm:grid-cols-[repeat(var(--stations),minmax(0,1fr))]"
+      style={{ "--stations": stations.length } as React.CSSProperties}
+      aria-label="Approval progress"
+    >
       {stations.map((s, i) => {
         const last = i === stations.length - 1;
         const lineDone = s.state === "done" && stations[i + 1] && stations[i + 1].state !== "upcoming";

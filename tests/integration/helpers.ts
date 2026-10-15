@@ -16,6 +16,7 @@ export const validDraft: DraftInput = {
   trainingType: "PLANNED",
   title: "Advanced Excel for Engineers",
   objective: "Improve reporting productivity",
+  relevancy: "Engineers prepare monthly progress reports in Excel.",
   startDate: "2026-11-02",
   endDate: "2026-11-03",
   startTime: "09:00",

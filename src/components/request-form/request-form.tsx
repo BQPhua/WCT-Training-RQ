@@ -13,12 +13,14 @@ import { BASE_PATH } from "@/lib/env";
 import { formatDateRange, formatMYR, formatTime12, totalFees } from "@/lib/format";
 import { requestFormSchema, type DraftInput } from "@/lib/validation/request";
 import { AttachmentField, type AttachmentItem } from "./attachment-field";
-import { CandidatePicker, type CandidateRow } from "./candidate-picker";
+import { CandidateNames } from "./candidate-names";
+import { NameListField } from "./name-list-field";
 
 export interface FormValues {
   trainingType: "" | "PLANNED" | "ADHOC";
   title: string;
   objective: string;
+  relevancy: string;
   startDate: string;
   endDate: string;
   startTime: string;
@@ -33,14 +35,15 @@ export interface RequestFormProps {
   version?: number;
   isReturned?: boolean;
   initial: FormValues;
-  initialCandidates: Omit<CandidateRow, "key">[];
+  initialCandidates: string[];
+  initialParticipantCount: number | null;
+  initialNameList: AttachmentItem | null;
   initialAttachments: AttachmentItem[];
-  requester: { name: string; department: string | null; businessUnit: string | null; hodName: string | null };
+  requester: { name: string; department: string | null; businessUnit: string | null; hodName: string | null; buAdminNames: string | null };
   departments: { id: string; name: string; buName: string }[];
 }
 
 const LABEL = "text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-2";
-const uid = () => Math.random().toString(36).slice(2, 10);
 
 function Section({ n, title, children, aside }: { n: number; title: string; children: React.ReactNode; aside?: React.ReactNode }) {
   return (
@@ -62,7 +65,13 @@ export function RequestForm(props: RequestFormProps) {
   const [id, setId] = React.useState(props.id);
   const [version, setVersion] = React.useState(props.version);
   const [v, setV] = React.useState<FormValues>(props.initial);
-  const [candidates, setCandidates] = React.useState<CandidateRow[]>(props.initialCandidates.map((c) => ({ ...c, key: uid() })));
+  const [candidates, setCandidates] = React.useState<string[]>(props.initialCandidates);
+  const [nameList, setNameList] = React.useState<AttachmentItem | null>(props.initialNameList);
+  const [participantCount, setParticipantCount] = React.useState(
+    props.initialNameList && props.initialParticipantCount ? String(props.initialParticipantCount) : "",
+  );
+  const [mode, setMode] = React.useState<"names" | "list">(props.initialNameList ? "list" : "names");
+  const [confirmMode, setConfirmMode] = React.useState<"names" | "list" | null>(null);
   const [attachments, setAttachments] = React.useState(props.initialAttachments);
   const [errors, setErrors] = React.useState<Record<string, string>>({});
   const [saving, setSaving] = React.useState(false);
@@ -91,12 +100,47 @@ export function RequestForm(props: RequestFormProps) {
   }, [dirty]);
 
   function payload(): DraftInput {
+    const count = Number.parseInt(participantCount, 10);
     return {
       ...v,
       trainingType: v.trainingType || undefined,
       endDate: v.endDate || v.startDate,
-      candidates: candidates.map(({ key: _k, manual: _m, ...c }) => ({ ...c, name: c.name.trim() })),
+      candidates: mode === "list" ? [] : candidates.map((name) => ({ name: name.trim() })).filter((c) => c.name),
+      participantCount: mode === "list" && Number.isFinite(count) ? count : null,
     };
+  }
+
+  const markDirty = () => {
+    editSeq.current += 1;
+    setDirty(true);
+  };
+
+  /** Switch between typed names and a name list; never keep both. */
+  async function applyMode(next: "names" | "list") {
+    setConfirmMode(null);
+    if (next === "list") {
+      setCandidates([]);
+    } else {
+      if (nameList) {
+        const res = await fetch(`${BASE_PATH}/api/attachments/${nameList.id}`, { method: "DELETE" });
+        if (!res.ok) {
+          toast.error("Couldn't remove the name list.");
+          return;
+        }
+      }
+      setNameList(null);
+      setParticipantCount("");
+    }
+    setMode(next);
+    markDirty();
+    setErrors(({ candidates: _c, participantCount: _p, nameList: _n, ...rest }) => rest);
+  }
+
+  function chooseMode(next: "names" | "list") {
+    if (next === mode) return;
+    const losesData = next === "list" ? candidates.some((c) => c.trim()) : !!nameList || !!participantCount;
+    if (losesData) setConfirmMode(next);
+    else void applyMode(next);
   }
 
   /** mode: "manual" (button), "silent" (before an upload) or "auto" (debounced autosave). */
@@ -130,15 +174,16 @@ export function RequestForm(props: RequestFormProps) {
   }
 
   function openReview() {
-    const parsed = requestFormSchema.safeParse(payload());
+    const parsed = requestFormSchema.safeParse({ ...payload(), hasNameList: mode === "list" && !!nameList });
     const errs: Record<string, string> = {};
     if (!parsed.success) for (const i of parsed.error.issues) errs[i.path[0] === "candidates" ? "candidates" : String(i.path[0])] ??= i.message;
+    if (mode === "list" && !nameList) errs.nameList = "Upload the participant name list";
     if (needsDepartment) errs.department = "Select your department.";
     setErrors(errs);
     if (Object.keys(errs).length) {
       toast.error("Please complete the highlighted fields.");
       const first = Object.keys(errs)[0];
-      document.getElementById(first === "candidates" ? "candidates-anchor" : first)?.focus();
+      document.getElementById(first === "candidates" || first === "nameList" ? "candidates-anchor" : first)?.focus();
       return;
     }
     setReview(true);
@@ -171,7 +216,7 @@ export function RequestForm(props: RequestFormProps) {
     const t = setTimeout(() => void saveDraft("auto"), 4000);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [v, candidates, dirty, review, submitting]);
+  }, [v, candidates, participantCount, dirty, review, submitting]);
   React.useEffect(() => {
     const onHide = () => {
       if (document.visibilityState === "hidden" && dirty && v.title.trim() && !submitting) void saveDraft("auto");
@@ -179,9 +224,10 @@ export function RequestForm(props: RequestFormProps) {
     document.addEventListener("visibilitychange", onHide);
     return () => document.removeEventListener("visibilitychange", onHide);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [v, candidates, dirty, submitting]);
+  }, [v, candidates, participantCount, dirty, submitting]);
 
-  const total = totalFees(v.feePerPax, candidates.length);
+  const participants = mode === "list" ? Number.parseInt(participantCount, 10) || 0 : candidates.filter((c) => c.trim()).length;
+  const total = totalFees(v.feePerPax, participants);
 
   return (
     <form
@@ -200,7 +246,7 @@ export function RequestForm(props: RequestFormProps) {
               <dd className="mt-1 text-[15px] text-ink">Human Resources and Administration Department</dd>
             </div>
             <div>
-              <dt className={LABEL}>From (requisitioner)</dt>
+              <dt className={LABEL}>From (Requester)</dt>
               <dd className="mt-1 text-[15px] text-ink">{props.requester.name}</dd>
             </div>
             <div>
@@ -267,15 +313,18 @@ export function RequestForm(props: RequestFormProps) {
           <Field label="Proposed training program's title / subject" htmlFor="title" required error={errors.title}>
             <Input id="title" required maxLength={200} value={v.title} onChange={set("title")} aria-invalid={!!errors.title} aria-describedby="title-error" placeholder="e.g. Advanced Contract Administration (CIDB)" />
           </Field>
-          <Field label="Objective" htmlFor="objective" required error={errors.objective} hint="What should participants be able to do afterwards?">
+          <Field label="Objective" htmlFor="objective" required error={errors.objective}>
             <Textarea id="objective" required maxLength={2000} value={v.objective} onChange={set("objective")} aria-invalid={!!errors.objective} aria-describedby="objective-error" />
+          </Field>
+          <Field label="Relevancy" htmlFor="relevancy" required error={errors.relevancy}>
+            <Textarea id="relevancy" required maxLength={2000} value={v.relevancy} onChange={set("relevancy")} aria-invalid={!!errors.relevancy} aria-describedby="relevancy-error" />
           </Field>
 
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            <Field label="Start date" htmlFor="startDate" required error={errors.startDate}>
+            <Field label="Training start date" htmlFor="startDate" required error={errors.startDate}>
               <Input id="startDate" type="date" required value={v.startDate} onChange={set("startDate")} aria-invalid={!!errors.startDate} />
             </Field>
-            <Field label="End date" htmlFor="endDate" error={errors.endDate} hint="Leave blank for one day">
+            <Field label="Training end date" htmlFor="endDate" error={errors.endDate}>
               <Input id="endDate" type="date" min={v.startDate || undefined} value={v.endDate} onChange={set("endDate")} aria-invalid={!!errors.endDate} />
             </Field>
             <Field label="Start time" htmlFor="startTime" required error={errors.startTime}>
@@ -307,25 +356,73 @@ export function RequestForm(props: RequestFormProps) {
               <p className="flex h-10 items-center rounded-md bg-ground px-3 text-[15px] font-semibold tabular text-ink">
                 {formatMYR(total)}
                 <span className="ml-2 text-xs font-normal text-muted">
-                  {candidates.length} × {formatMYR(v.feePerPax || 0)}
+                  {participants} × {formatMYR(v.feePerPax || 0)}
                 </span>
               </p>
             </div>
           </div>
         </Section>
 
-        <Section n={3} title="Proposed candidates" aside={<span className="text-xs tabular text-muted">{candidates.length} / 8</span>}>
+        <Section
+          n={3}
+          title="Proposed candidates"
+          aside={mode === "names" ? <span className="text-xs tabular text-muted">{candidates.filter((c) => c.trim()).length} / 8</span> : null}
+        >
           <span id="candidates-anchor" tabIndex={-1} />
-          <CandidatePicker
-            value={candidates}
-            onChange={(rows) => {
-              setCandidates(rows);
-              editSeq.current += 1;
-              setDirty(true);
-              if (errors.candidates) setErrors(({ candidates: _c, ...rest }) => rest);
-            }}
-            error={errors.candidates}
-          />
+          <fieldset>
+            <legend className="sr-only">How will you list the participants?</legend>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {(
+                [
+                  ["names", "Type names (up to 8)", "Enter each participant's full name."],
+                  ["list", "Upload name list (more than 8)", "Attach an Excel or CSV list instead."],
+                ] as const
+              ).map(([value, label, hint]) => (
+                <label
+                  key={value}
+                  className={cn(
+                    "flex cursor-pointer gap-3 rounded-lg border p-3.5 transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-focus",
+                    mode === value ? "border-brand bg-brand-soft/50" : "border-line-strong hover:border-ink-2/40",
+                  )}
+                >
+                  <input type="radio" name="participantMode" value={value} checked={mode === value} onChange={() => chooseMode(value)} className="mt-0.5 size-4" />
+                  <span>
+                    <span className="block text-sm font-medium text-ink">{label}</span>
+                    <span className="block text-[13px] text-muted">{hint}</span>
+                  </span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
+          {mode === "names" ? (
+            <CandidateNames
+              value={candidates}
+              onChange={(names) => {
+                setCandidates(names);
+                markDirty();
+                if (errors.candidates) setErrors(({ candidates: _c, ...rest }) => rest);
+              }}
+              error={errors.candidates}
+            />
+          ) : (
+            <NameListField
+              nameList={nameList}
+              onNameListChange={(item) => {
+                setNameList(item);
+                if (!item) setParticipantCount(""); // the server clears the count with the list
+                markDirty(); // re-save so the count is stored against the list
+                if (errors.nameList) setErrors(({ nameList: _n, ...rest }) => rest);
+              }}
+              participantCount={participantCount}
+              onParticipantCountChange={(value) => {
+                setParticipantCount(value);
+                markDirty();
+                if (errors.participantCount) setErrors(({ participantCount: _p, ...rest }) => rest);
+              }}
+              ensureSaved={async () => id ?? (await saveDraft("silent"))?.id ?? null}
+              errors={{ nameList: errors.nameList ?? errors.candidates, participantCount: errors.participantCount }}
+            />
+          )}
         </Section>
 
         <Panel className="animate-rise">
@@ -346,6 +443,7 @@ export function RequestForm(props: RequestFormProps) {
               {[
                 ["You submit", props.requester.name],
                 ["Department HOD", props.requester.hodName ?? "Not assigned — contact HR"],
+                [props.requester.businessUnit ? `${props.requester.businessUnit} BU Admin` : "BU Admin", props.requester.buAdminNames ?? "Not assigned — contact HR"],
                 ["L&D Team", "Any L&D member reviews"],
                 ["HR Head", "Final approval"],
               ].map(([stage, who], i) => (
@@ -353,14 +451,11 @@ export function RequestForm(props: RequestFormProps) {
                   <span className={cn("relative z-10 mt-1 size-[15px] shrink-0 rounded-full border-2 bg-surface", i === 0 ? "border-brand" : "border-line-strong")} />
                   <span>
                     <span className="block text-sm font-medium text-ink">{stage}</span>
-                    <span className={cn("block text-[13px]", !props.requester.hodName && i === 1 ? "text-danger" : "text-muted")}>{who}</span>
+                    <span className={cn("block text-[13px]", (i === 1 && !props.requester.hodName) || (i === 2 && !props.requester.buAdminNames) ? "text-danger" : "text-muted")}>{who}</span>
                   </span>
                 </li>
               ))}
             </ol>
-            <div className="border-t border-line pt-4 text-[13px] text-muted">
-              {props.requester.businessUnit ? `Your ${props.requester.businessUnit} BU Admin is kept informed.` : "Your BU Admin is kept informed."}
-            </div>
           </div>
           <div className="flex flex-col gap-2 border-t border-line bg-surface-2 px-5 py-4">
             <Button type="submit" variant="brand" size="lg" disabled={saving || submitting}>
@@ -382,18 +477,40 @@ export function RequestForm(props: RequestFormProps) {
         </Panel>
       </aside>
 
+      <Dialog open={confirmMode !== null} onOpenChange={(o) => !o && setConfirmMode(null)}>
+        <DialogContent
+          title={confirmMode === "list" ? "Switch to a name list?" : "Switch to typed names?"}
+          description={
+            confirmMode === "list"
+              ? "The names you typed will be removed. A request lists participants one way only."
+              : "The uploaded name list and participant number will be removed."
+          }
+        >
+          <div className="mt-2 flex justify-end gap-2">
+            <DialogClose asChild>
+              <Button type="button" variant="ghost">
+                {confirmMode === "list" ? "Keep typed names" : "Keep name list"}
+              </Button>
+            </DialogClose>
+            <Button type="button" variant="brand" onClick={() => confirmMode && applyMode(confirmMode)}>
+              {confirmMode === "list" ? "Switch to name list" : "Switch to typed names"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={review} onOpenChange={setReview}>
         <DialogContent title={props.isReturned ? "Resubmit this request?" : "Submit this request?"} description={`It will go to ${props.requester.hodName ?? "your HOD"} for approval.`}>
           <dl className="divide-y divide-line rounded-lg border border-line text-sm">
             {[
               ["Training", v.title],
               ["Type", v.trainingType === "PLANNED" ? "Planned training" : "Ad hoc training"],
-              ["When", `${formatDateRange(v.startDate, v.endDate || v.startDate)}, ${formatTime12(v.startTime)} – ${formatTime12(v.endTime)}`],
+              ["Training Dates", `${formatDateRange(v.startDate, v.endDate || v.startDate)}, ${formatTime12(v.startTime)} – ${formatTime12(v.endTime)}`],
               ["Venue", v.venue],
-              ["Candidates", `${candidates.length}: ${candidates.map((c) => c.name).join(", ")}`],
+              ["Participants", mode === "list" ? `${participants} (name list: ${nameList?.originalName ?? "not uploaded"})` : `${participants}: ${candidates.filter((c) => c.trim()).join(", ")}`],
               ["Total fees", formatMYR(total)],
             ].map(([k, val]) => (
-              <div key={k} className="grid grid-cols-[96px_1fr] gap-3 px-3 py-2">
+              <div key={k} className="grid grid-cols-[112px_1fr] gap-3 px-3 py-2">
                 <dt className="text-muted">{k}</dt>
                 <dd className="text-ink">{val}</dd>
               </div>
@@ -407,13 +524,18 @@ export function RequestForm(props: RequestFormProps) {
               <CircleAlert className="mt-0.5 size-4 shrink-0" /> Your department has no HOD assigned, so this can&apos;t be submitted yet. Please contact HR.
             </p>
           )}
+          {props.requester.hodName && !props.requester.buAdminNames && (
+            <p className="mt-3 flex gap-2 rounded-lg bg-danger-soft px-3 py-2 text-[13px] text-danger">
+              <CircleAlert className="mt-0.5 size-4 shrink-0" /> Your business unit has no BU Admin assigned, so this can&apos;t be submitted yet. Please contact HR.
+            </p>
+          )}
           <div className="mt-6 flex justify-end gap-2">
             <DialogClose asChild>
               <Button type="button" variant="ghost">
                 Keep editing
               </Button>
             </DialogClose>
-            <Button type="button" variant="brand" onClick={submit} disabled={submitting || !props.requester.hodName}>
+            <Button type="button" variant="brand" onClick={submit} disabled={submitting || !props.requester.hodName || !props.requester.buAdminNames}>
               {submitting ? <Loader2 className="animate-spin" /> : <ArrowRight />} {props.isReturned ? "Resubmit" : "Submit to HOD"}
             </Button>
           </div>

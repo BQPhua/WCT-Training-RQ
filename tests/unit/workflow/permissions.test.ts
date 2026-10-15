@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canEditContent, canEditLndFields, canView } from "@/lib/workflow";
+import { canEditContent, canEditLndFields, canView, stageOf } from "@/lib/workflow";
 import { admin, buAdminLand, buAdminMalls, hodLand, hodMalls, hr, lnd, req, requester, stranger } from "./fixtures";
 
 describe("canView", () => {
@@ -46,5 +46,11 @@ describe("canEditLndFields", () => {
     expect(canEditLndFields(req("PENDING_LND"), lnd)).toBe(true);
     expect(canEditLndFields(req("PENDING_HR"), lnd)).toBe(false);
     expect(canEditLndFields(req("PENDING_LND"), hr)).toBe(false);
+  });
+});
+
+describe("stageOf", () => {
+  it("PENDING_BU is held by the BU Admin stage", () => {
+    expect(stageOf("PENDING_BU")).toBe("BU");
   });
 });

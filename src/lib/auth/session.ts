@@ -7,6 +7,8 @@ export interface SessionData {
   userId?: string;
   /** Epoch ms of sign-in; sessions are capped at 8 hours absolute. */
   signedInAt?: number;
+  /** System Admin only: demo account the app is currently shown as. */
+  viewAsUserId?: string;
 }
 
 export interface OidcTxData {

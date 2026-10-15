@@ -54,6 +54,7 @@ export async function GET(req: NextRequest) {
 
     const session = await getSession();
     session.userId = user.id;
+    delete session.viewAsUserId; // a new sign-in never inherits "view as"
     session.signedInAt = Date.now();
     await session.save();
     return NextResponse.redirect(`${env.APP_URL}${returnTo ?? "/dashboard"}`);

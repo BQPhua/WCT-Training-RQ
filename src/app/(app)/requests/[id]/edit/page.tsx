@@ -25,7 +25,7 @@ export default async function EditRequestPage({ params, searchParams }: PageProp
     <>
       <PageHeader
         title={isReturned ? `Amend ${detail.request.refNo}` : detail.request.refNo ? `Edit ${detail.request.refNo}` : "Edit draft"}
-        description="Training Requisition Form · WCT-F-4.18-2 (REV2)"
+        description="Training Requisition Form"
         actions={<StatusBadge status={detail.request.status} />}
       />
       {sp.cloned && <p className="mb-5 rounded-lg bg-brand-soft px-4 py-3 text-sm text-ink">This is a copy. Check the dates and candidates before submitting.</p>}

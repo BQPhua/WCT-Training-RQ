@@ -1,3 +1,5 @@
+import fs from "node:fs";
+import path from "node:path";
 import { redirect } from "next/navigation";
 import { KeyRound } from "lucide-react";
 import { asc } from "drizzle-orm";
@@ -32,6 +34,15 @@ const PATTERN_CLASS: Record<string, string> = {
   C: "bg-shell-muted/25",
 };
 
+/** The official Microsoft logo is not shipped in the repo; see docs/DEPLOYMENT.md. */
+function hasMicrosoftLogo(): boolean {
+  try {
+    return fs.existsSync(path.join(process.cwd(), "public/brand/microsoft-logo.svg"));
+  } catch {
+    return false;
+  }
+}
+
 export default async function SignInPage({ searchParams }: PageProps<"/signin">) {
   const sp = await searchParams;
   const returnTo = safeReturnTo(typeof sp.returnTo === "string" ? sp.returnTo : null);
@@ -52,7 +63,7 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
           </div>
           <h1 className="text-[32px] font-semibold leading-tight tracking-tight">Every training request, from proposal to approval, in one place.</h1>
           <p className="mt-4 text-[15px] leading-relaxed text-shell-muted">
-            Raise a request, follow it through HOD, L&amp;D and HR Head approval, and print the signed-off WCT-F-4.18-2 form when it&apos;s done.
+            Raise a request, follow it through HOD, BU Admin, L&amp;D and HR Head approval, and print the signed-off training requisition form when it&apos;s done.
           </p>
         </div>
         <p className="mt-12 text-xs text-shell-muted">WCT Berhad · Human Resources &amp; Administration</p>
@@ -77,7 +88,14 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
 
           <Button asChild variant="primary" size="lg" className="mt-6 w-full">
             <a href={`${BASE_PATH}/api/auth/login?returnTo=${encodeURIComponent(returnTo)}`} aria-disabled={!isEntraConfigured()}>
-              <KeyRound /> Sign in with Microsoft
+              {hasMicrosoftLogo() ? (
+                // Official asset from Microsoft's identity platform branding guidelines (added by the deployer).
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={`${BASE_PATH}/brand/microsoft-logo.svg`} alt="" width={20} height={20} className="size-5" />
+              ) : (
+                <KeyRound />
+              )}{" "}
+              Sign in with Microsoft
             </a>
           </Button>
           <p className="mt-4 text-[13px] leading-relaxed text-muted">

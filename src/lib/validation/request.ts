@@ -20,7 +20,6 @@ export const candidateSchema = z.object({
     .pipe(z.email("Invalid email").optional()),
   jobTitle: optionalTrimmed(120),
   department: optionalTrimmed(120),
-  staffNo: optionalTrimmed(30),
   userId: z.uuid().optional().nullable().transform((v) => v ?? undefined),
 });
 export type CandidateInput = z.input<typeof candidateSchema>;
@@ -49,6 +48,7 @@ export const requestFormSchema = z
     trainingType: z.enum(["PLANNED", "ADHOC"], { error: "Select Planned or Ad Hoc training" }),
     title: trimmed(200, "Training title"),
     objective: trimmed(2000, "Objective"),
+    relevancy: trimmed(2000, "Relevancy"),
     startDate: z.string().regex(DATE, "Start date is required"),
     endDate: z.string().regex(DATE, "End date is required"),
     startTime: z.string().regex(TIME, "Start time is required"),
@@ -56,9 +56,22 @@ export const requestFormSchema = z
     feePerPax: z.string().trim().regex(MONEY, "Enter a valid amount (max 2 decimal places)"),
     venue: trimmed(200, "Venue"),
     conductedBy: trimmed(200, "Conducted by"),
-    candidates: candidatesList(1),
+    candidates: candidatesList(0),
+    /** Set by the server from the request's attachments, never by the client. */
+    hasNameList: z.boolean().default(false),
+    participantCount: z.number().int().min(1).max(999).nullable().optional(),
   })
   .superRefine((v, ctx) => {
+    if (v.hasNameList) {
+      if (v.candidates.length) {
+        ctx.addIssue({ code: "custom", message: "Remove the typed names when using a name list", path: ["candidates"] });
+      }
+      if (!v.participantCount) {
+        ctx.addIssue({ code: "custom", message: "Enter the number of participants on the name list", path: ["participantCount"] });
+      }
+    } else if (!v.candidates.length) {
+      ctx.addIssue({ code: "custom", message: "Add at least one candidate or attach a name list", path: ["candidates"] });
+    }
     if (v.endDate < v.startDate) {
       ctx.addIssue({ code: "custom", message: "End date cannot be before start date", path: ["endDate"] });
     }
@@ -73,6 +86,8 @@ export const draftSchema = z.object({
   trainingType: z.enum(["PLANNED", "ADHOC"]).optional(),
   title: trimmed(200, "Training title"),
   objective: optionalTrimmed(2000),
+  relevancy: optionalTrimmed(2000),
+  participantCount: z.number().int().min(1, "Enter at least 1 participant").max(999, "At most 999 participants").nullable().optional(),
   startDate: z.string().regex(DATE).optional().or(z.literal("").transform(() => undefined)),
   endDate: z.string().regex(DATE).optional().or(z.literal("").transform(() => undefined)),
   startTime: z.string().regex(TIME).optional().or(z.literal("").transform(() => undefined)),
@@ -90,8 +105,6 @@ export const actionSchema = z.object({
   version: z.number().int().positive(),
   type: z.enum(["SUBMIT", "RESUBMIT", "APPROVE", "REJECT", "CANCEL"]),
   remark: z.string().max(2000).optional(),
-  sendBackTo: z.enum(["REQUESTER", "HOD", "LND", "HR"]).optional(),
-  notify: z.array(z.enum(["REQUESTER", "HOD", "LND"])).optional(),
 });
 export type ActionSchemaInput = z.infer<typeof actionSchema>;
 

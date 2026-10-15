@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { seed } from "@/db/seed";
-import { createDraft, performAction, setNotifier } from "@/lib/services/requests";
+import { createDraft, performAction, setNotifier, updateContent } from "@/lib/services/requests";
+import { saveAttachment } from "@/lib/services/attachments";
 import { getReports, ReportsForbiddenError } from "@/lib/services/reports";
 import { asUser, validDraft } from "./helpers";
 import { resetDb } from "./setup";
@@ -17,7 +18,8 @@ async function approved(email: string, hod: string, fee: string, n: number) {
   const u = await asUser(email);
   const { id } = await createDraft(u, { ...validDraft, feePerPax: fee, candidates: Array.from({ length: n }, (_, i) => ({ name: `Person ${i}` })) });
   let v = (await performAction(u, { requestId: id, version: 1, type: "SUBMIT" })).version;
-  for (const a of [hod, "lnd1@demo.wct.my", "hrhead@demo.wct.my"]) v = (await performAction(await asUser(a), { requestId: id, version: v, type: "APPROVE" })).version;
+  const bua = hod.replace("hod.", "buadmin.");
+  for (const a of [hod, bua, "lnd1@demo.wct.my", "hrhead@demo.wct.my"]) v = (await performAction(await asUser(a), { requestId: id, version: v, type: "APPROVE" })).version;
 }
 
 describe("getReports", () => {
@@ -30,7 +32,7 @@ describe("getReports", () => {
     expect(fees.MALLS).toBe("50.00");
     expect(r.byMonth).toHaveLength(12);
     expect(r.byType.PLANNED).toBe(2);
-    expect(r.turnaround.map((t) => t.stage)).toEqual(["HOD", "LND", "HR"]);
+    expect(r.turnaround.map((t) => t.stage)).toEqual(["HOD", "BU", "LND", "HR"]);
     expect(r.statusCounts.APPROVED).toBe(2);
   });
 
@@ -44,5 +46,16 @@ describe("getReports", () => {
 
   it("is forbidden for ordinary staff", async () => {
     await expect(getReports(await asUser("requester@demo.wct.my"), { year })).rejects.toBeInstanceOf(ReportsForbiddenError);
+  });
+
+  it("counts name-list participants in approved spend", async () => {
+    const u = await asUser("requester@demo.wct.my");
+    const { id } = await createDraft(u, { ...validDraft, feePerPax: "100.00", candidates: [] });
+    await saveAttachment(u, id, { name: "names.csv", type: "text/csv", bytes: new TextEncoder().encode("Name\nA\n") }, "NAME_LIST");
+    let v = (await updateContent(u, id, 1, { ...validDraft, feePerPax: "100.00", candidates: [], participantCount: 25 })).version;
+    v = (await performAction(u, { requestId: id, version: v, type: "SUBMIT" })).version;
+    for (const a of ["hod.land@demo.wct.my", "buadmin.land@demo.wct.my", "lnd1@demo.wct.my", "hrhead@demo.wct.my"]) v = (await performAction(await asUser(a), { requestId: id, version: v, type: "APPROVE" })).version;
+    const r = await getReports(await asUser("hrhead@demo.wct.my"), { year });
+    expect(r.totals.approvedFees).toBe("2500.00");
   });
 });

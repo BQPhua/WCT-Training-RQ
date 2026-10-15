@@ -22,8 +22,21 @@ describe("validateUpload", () => {
   it("accepts an allowed file", () => {
     expect(validateUpload({ name: "brochure.pdf", size: 2 * MB }, 0)).toBeNull();
   });
-  it("rejects files over 10 MB", () => {
-    expect(validateUpload({ name: "big.pdf", size: 11 * MB }, 0)).toBe("File exceeds 10 MB");
+  it("rejects files over 5 MB", () => {
+    expect(validateUpload({ name: "big.pdf", size: 5 * MB + 1 }, 0)).toBe("File exceeds 5 MB");
+    expect(validateUpload({ name: "ok.pdf", size: 5 * MB }, 0)).toBeNull();
+  });
+  it("name lists accept Excel and CSV only", () => {
+    expect(validateUpload({ name: "names.csv", size: 10 }, 0, "NAME_LIST")).toBeNull();
+    expect(validateUpload({ name: "names.xls", size: 10 }, 0, "NAME_LIST")).toBeNull();
+    expect(validateUpload({ name: "names.xlsx", size: 10 }, 0, "NAME_LIST")).toBeNull();
+    expect(validateUpload({ name: "names.pdf", size: 10 }, 0, "NAME_LIST")).toBe("Name list must be an Excel or CSV file");
+    expect(validateUpload({ name: "names.csv", size: 10 }, 0, "SUPPORTING")).toBe("File type not allowed");
+    expect(validateUpload({ name: "virus.exe", size: 10 }, 0, "NAME_LIST")).toBe("Name list must be an Excel or CSV file");
+  });
+  it("name list size limit is 5 MB and it does not count towards the 5 attachments", () => {
+    expect(validateUpload({ name: "names.xlsx", size: 5 * MB + 1 }, 0, "NAME_LIST")).toBe("File exceeds 5 MB");
+    expect(validateUpload({ name: "names.xlsx", size: 10 }, 5, "NAME_LIST")).toBeNull();
   });
   it("rejects disallowed types", () => {
     expect(validateUpload({ name: "virus.exe", size: 10 }, 0)).toBe("File type not allowed");
@@ -45,6 +58,9 @@ describe("sniffOk (magic bytes)", () => {
     expect(sniffOk("jpg", bytes(0xff, 0xd8, 0xff))).toBe(true);
     expect(sniffOk("docx", bytes(0x50, 0x4b, 0x03, 0x04))).toBe(true);
     expect(sniffOk("pdf", new TextEncoder().encode("MZ\x90 not a pdf"))).toBe(false);
+    expect(sniffOk("xls", bytes(0xd0, 0xcf, 0x11, 0xe0))).toBe(true);
+    expect(sniffOk("csv", new TextEncoder().encode("Name,Department\nAli,QS\n"))).toBe(true);
+    expect(sniffOk("csv", new Uint8Array([0x41, 0x00, 0x42]))).toBe(false);
   });
 });
 

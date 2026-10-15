@@ -23,6 +23,19 @@ export class StaleVersionError extends ServiceError {
   }
 }
 
+export class NoBuAdminError extends ServiceError {
+  /** `forRequester`: the requester submitting; otherwise an approver moving the request on. */
+  constructor(businessUnit: string | null, forRequester = true) {
+    const bu = businessUnit ?? "unknown";
+    super(
+      forRequester
+        ? `Your business unit (${bu}) has no BU Admin assigned. Please contact HR.`
+        : `This request's business unit (${bu}) has no BU Admin assigned, so it can't move on yet. Please contact HR.`,
+      422,
+    );
+  }
+}
+
 export class NoHodError extends ServiceError {
   constructor() {
     super("Your department has no HOD assigned. Please contact HR.", 422);

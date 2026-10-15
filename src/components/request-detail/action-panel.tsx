@@ -9,42 +9,18 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent } from "@/components/ui/dialog";
 import { Field, Textarea } from "@/components/ui/field";
 import { cn } from "@/lib/utils";
-import {
-  STAGE_LABEL,
-  type AllowedAction,
-  type NotifyTarget,
-  type Stage,
-} from "@/lib/workflow";
-
-const NOTIFY_LABEL: Record<NotifyTarget, string> = {
-  REQUESTER: "Requester",
-  HOD: "Department HOD",
-  LND: "L&D Team",
-};
-const STAGE_TO_NOTIFY: Partial<Record<Stage, NotifyTarget>> = {
-  REQUESTER: "REQUESTER",
-  HOD: "HOD",
-  LND: "LND",
-};
-const SEND_BACK_HINT: Record<Stage, string> = {
-  REQUESTER: "Requester amends and resubmits; approval restarts at the HOD.",
-  HOD: "The Department HOD reviews it again.",
-  LND: "The L&D Team reviews it again.",
-  HR: "",
-};
+import type { AllowedAction } from "@/lib/workflow";
 
 export function ActionPanel({
   requestId,
   version,
   actions,
   stageLabel,
-  buName,
 }: {
   requestId: string;
   version: number;
   actions: AllowedAction[];
   stageLabel: string;
-  buName: string | null;
 }) {
   const router = useRouter();
   const [busy, setBusy] = React.useState<string | null>(null);
@@ -54,18 +30,9 @@ export function ActionPanel({
   const [remark, setRemark] = React.useState("");
   const [remarkError, setRemarkError] = React.useState<string>();
   const reject = actions.find((a) => a.type === "REJECT");
-  const options = reject?.sendBackOptions ?? [];
-  const [sendBackTo, setSendBackTo] = React.useState<Stage>(
-    options[0] ?? "REQUESTER",
-  );
-  const [notify, setNotify] = React.useState<NotifyTarget[]>([]);
   const has = (t: AllowedAction["type"]) => actions.some((a) => a.type === t);
-  const lockedTarget = STAGE_TO_NOTIFY[sendBackTo];
 
-  async function run(
-    type: AllowedAction["type"],
-    extra: Record<string, unknown> = {},
-  ) {
+  async function run(type: AllowedAction["type"]) {
     if ((type === "REJECT" || type === "CANCEL") && remark.trim().length < 3) {
       setRemarkError("Please give a reason (at least 3 characters).");
       return;
@@ -76,7 +43,6 @@ export function ActionPanel({
       version,
       type,
       remark: remark.trim() || undefined,
-      ...extra,
     });
     setBusy(null);
     if (!r.ok) {
@@ -92,7 +58,7 @@ export function ActionPanel({
       type === "APPROVE"
         ? "Approved and passed to the next stage"
         : type === "REJECT"
-          ? `Sent back to ${STAGE_LABEL[sendBackTo]}`
+          ? "Returned to requester"
           : type === "CANCEL"
             ? "Request cancelled"
             : "Submitted",
@@ -139,7 +105,7 @@ export function ActionPanel({
               disabled={!!busy}
               className="hidden text-returned-text sm:inline-flex"
             >
-              <CornerUpLeft /> Reject &amp; send back
+              <CornerUpLeft /> Reject
             </Button>
           )}
           {(has("SUBMIT") || has("RESUBMIT")) && (
@@ -199,89 +165,9 @@ export function ActionPanel({
 
         <Dialog open={rejectOpen} onOpenChange={setRejectOpen}>
           <DialogContent
-            title="Reject and send back"
-            description="Choose where the request goes and who should be told. A remark is required."
+            title="Reject and return to requester"
+            description="The requester will amend and resubmit; approval restarts at the Department HOD. Everyone who approved this round is copied."
           >
-            {options.length > 1 && (
-              <fieldset className="mb-5">
-                <legend className="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-2">
-                  Send back to
-                </legend>
-                <div className="grid gap-2">
-                  {options.map((o) => (
-                    <label
-                      key={o}
-                      className={cn(
-                        "flex cursor-pointer gap-3 rounded-lg border p-3 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-focus",
-                        sendBackTo === o
-                          ? "border-returned bg-returned-soft/60"
-                          : "border-line-strong hover:border-ink-2/40",
-                      )}
-                    >
-                      <input
-                        type="radio"
-                        name="sendBack"
-                        value={o}
-                        checked={sendBackTo === o}
-                        onChange={() => setSendBackTo(o)}
-                        className="mt-0.5 size-4"
-                      />
-                      <span>
-                        <span className="block text-sm font-medium text-ink">
-                          {STAGE_LABEL[o]}
-                        </span>
-                        <span className="block text-[13px] text-muted">
-                          {SEND_BACK_HINT[o]}
-                        </span>
-                      </span>
-                    </label>
-                  ))}
-                </div>
-              </fieldset>
-            )}
-
-            <fieldset className="mb-5">
-              <legend className="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-2">
-                Notify
-              </legend>
-              <div className="grid gap-1.5 sm:grid-cols-2">
-                {(["REQUESTER", "HOD", "LND"] as NotifyTarget[]).map((t) => {
-                  const locked = lockedTarget === t;
-                  const checked = locked || notify.includes(t);
-                  return (
-                    <label
-                      key={t}
-                      className={cn(
-                        "flex items-center gap-2.5 rounded-md px-2 py-1.5 text-sm",
-                        locked ? "text-muted" : "cursor-pointer hover:bg-ink/5",
-                      )}
-                    >
-                      <input
-                        type="checkbox"
-                        className="size-4"
-                        checked={checked}
-                        disabled={locked}
-                        onChange={(e) =>
-                          setNotify((n) =>
-                            e.target.checked
-                              ? [...n, t]
-                              : n.filter((x) => x !== t),
-                          )
-                        }
-                      />
-                      {NOTIFY_LABEL[t]}
-                      {locked && <span className="text-xs">(receives it)</span>}
-                    </label>
-                  );
-                })}
-                <label className="flex items-center gap-2.5 rounded-md px-2 py-1.5 text-sm text-muted">
-                  <input type="checkbox" className="size-4" checked disabled />
-                  {buName ? `${buName} BU Admin` : "BU Admin"}{" "}
-                  <span className="text-xs">(always)</span>
-                </label>
-              </div>
-            </fieldset>
-
             <Field
               label="Remark"
               htmlFor="reject-remark"
@@ -307,12 +193,7 @@ export function ActionPanel({
               </DialogClose>
               <Button
                 variant="danger"
-                onClick={() =>
-                  run("REJECT", {
-                    sendBackTo,
-                    notify: notify.filter((n) => n !== lockedTarget),
-                  })
-                }
+                onClick={() => run("REJECT")}
                 disabled={!!busy}
               >
                 {busy === "REJECT" ? (
@@ -320,7 +201,7 @@ export function ActionPanel({
                 ) : (
                   <CornerUpLeft />
                 )}{" "}
-                Send back to {STAGE_LABEL[sendBackTo]}
+                Reject
               </Button>
             </div>
           </DialogContent>
@@ -389,7 +270,7 @@ export function ActionPanel({
                 onClick={() => setRejectOpen(true)}
                 disabled={!!busy}
               >
-                <CornerUpLeft /> Reject &amp; send back
+                <CornerUpLeft /> Reject
               </Button>
             )}
           </div>

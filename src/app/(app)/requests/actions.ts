@@ -29,7 +29,9 @@ async function save(input: SaveInput) {
 export async function saveDraftAction(input: SaveInput): Promise<ActionResult<{ id: string; version: number }>> {
   try {
     const r = await save(input);
-    revalidatePath("/my-requests");
+    // No revalidatePath here: it makes the router refresh the current route, which
+    // remounts the form mid-edit (losing typing and the "Draft saved" status).
+    // Every app page is rendered per request, so My requests is fresh anyway.
     return { ok: true, ...r };
   } catch (e) {
     return toActionError(e);
