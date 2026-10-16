@@ -53,13 +53,23 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
 
   return (
     <div className="relative min-h-dvh overflow-hidden bg-[#1c232d]">
-      {/* Decorative photo of WCT's headquarters; its own logo and slogan show on the left. */}
+      {/* Soft, blurred copy of the photo fills any space the photo itself doesn't cover. */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={`${BASE_PATH}/brand/signin-bg-blur.jpg`} alt="" aria-hidden className="absolute inset-0 size-full scale-110 object-cover blur-2xl brightness-75" />
+      {/*
+        Decorative photo of WCT's headquarters (its own logo and slogan sit on the left).
+        It always fits the screen height and keeps its proportions, so the whole picture
+        shows at any screen size instead of being blown up and cropped; on very wide
+        screens its right edge fades into the blurred copy.
+      */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={`${BASE_PATH}/brand/signin-bg.jpg`}
         alt=""
         aria-hidden
-        className="absolute inset-0 size-full object-cover object-[18%_50%] animate-[signin-zoom_18s_ease-out_both] motion-reduce:animate-none"
+        width={2384}
+        height={1340}
+        className="absolute inset-y-0 left-0 h-full w-auto max-w-none [mask-image:linear-gradient(to_right,black_82%,transparent)]"
       />
       <div aria-hidden className="absolute inset-0 bg-[#10151c]/60 lg:bg-transparent lg:bg-gradient-to-r lg:from-transparent lg:from-45% lg:to-[#10151c]/75" />
 
