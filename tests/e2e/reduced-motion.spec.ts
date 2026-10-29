@@ -23,3 +23,16 @@ test("with reduced motion, the dashboard is fully visible straight away", async 
   expect(opacity).toBe(1);
   await ctx.close();
 });
+
+test("with reduced motion, staggered rows have no entrance delay", async ({ browser }) => {
+  const ctx = await browser.newContext({ reducedMotion: "reduce" });
+  const page = await ctx.newPage();
+  await page.goto("signin");
+  await page.locator('button[data-email="lnd1@demo.wct.my"]').click();
+  await expect(page).toHaveURL(/\/dashboard/);
+  await page.goto("history");
+  const delays = await page.locator("tbody tr").evaluateAll((rows) => rows.slice(0, 8).map((r) => getComputedStyle(r).animationDelay));
+  expect(delays.length).toBeGreaterThan(1);
+  for (const d of delays) expect(d).toBe("0s");
+  await ctx.close();
+});

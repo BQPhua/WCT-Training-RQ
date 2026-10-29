@@ -122,7 +122,9 @@ async function retime(requestId: string, month: Date) {
 
 async function main() {
   const now = new Date();
-  const total = randInt(10, 20);
+  // DEMO_REQUEST_COUNT pins the count (10–20) so every plan/requester pairing can be exercised.
+  const pinned = Number.parseInt(process.env.DEMO_REQUEST_COUNT ?? "", 10);
+  const total = pinned >= 10 && pinned <= 20 ? pinned : randInt(10, 20);
   const monthsSoFar = Array.from({ length: now.getMonth() + 1 }, (_, m) => new Date(now.getFullYear(), m, 1));
   const months = shuffle(monthsSoFar).slice(0, Math.min(5, monthsSoFar.length)).sort((a, b) => a.getTime() - b.getTime());
   const listFile = await nameListXlsx();
@@ -172,9 +174,11 @@ async function main() {
         conductedBy: provider,
       })).version;
     }
+    let status = "DRAFT";
     const step = async (email: string, input: Record<string, unknown>) => {
       const r = await performAction(await as(email), { requestId: id, version, ...input } as never);
       version = r.version;
+      status = r.status;
     };
     for (const s of PLANS[i % PLANS.length]) {
       if (s === "SUBMIT") await step(reqEmail, { type: "SUBMIT" });
@@ -182,7 +186,8 @@ async function main() {
       if (s === "HOD") await step(HOD_OF[reqEmail], { type: "APPROVE" });
       if (s === "BU") await step(BU_ADMIN_OF[reqEmail], { type: "APPROVE" });
       if (s === "LND") await step(i % 2 ? "lnd1@demo.wct.my" : "lnd2@demo.wct.my", { type: "APPROVE", remark: "HRD Corp claimable under SBL-Khas." });
-      if (s === "HR") await step("hrhead@demo.wct.my", { type: "APPROVE" });
+      // Land and Malls are finalised by L&D, so only a request that reached HR Head gets this step.
+      if (s === "HR" && status === "PENDING_HR") await step("hrhead@demo.wct.my", { type: "APPROVE" });
       if (s === "BU_REJECT") await step(BU_ADMIN_OF[reqEmail], { type: "REJECT", remark: "Not in this year's BU training budget — please align with the BU plan and resubmit." });
       if (s === "LND_REJECT") await step("lnd1@demo.wct.my", { type: "REJECT", remark: "Provider quotation missing — please attach it." });
       if (s === "CANCEL") await step(reqEmail, { type: "CANCEL", remark: "Project deadline moved; will re-apply next quarter." });

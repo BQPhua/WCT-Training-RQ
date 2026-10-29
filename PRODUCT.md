@@ -15,7 +15,7 @@ web
 
 ## Product Purpose
 
-Digitalise WCT Berhad's Training Requisition Form (WCT-F-4.18-2 REV2) into an internal system with a fixed approval chain: Requester → Department HOD → L&D Team → HR Head. It has status tracking, a full audit trail, searchable history and a printable PDF matching the paper form. Success means approvers act in seconds, nobody has to ask "where is my request?", and HR can find any past request.
+Digitalise WCT Berhad's Training Requisition Form (WCT-F-4.18-2 REV2) into an internal system with a fixed approval chain: Requester → Department HOD → BU Admin → L&D Team, where L&D gives final approval for Land and Malls and E&C goes on to the HR Head (a per-business-unit setting). It has status tracking, a full audit trail, searchable history and a printable PDF matching the paper form. Success means approvers act in seconds, nobody has to ask "where is my request?", and HR can find any past request.
 
 ## Positioning
 

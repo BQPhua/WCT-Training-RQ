@@ -38,7 +38,9 @@ export function buildStations(d: RequestDetail, holders: { hod: string | null; b
   const hrApprovedThisRound = acts.some(
     (a) => a.action === "APPROVE" && a.fromStatus === "PENDING_HR" && a.createdAt >= (submitted?.createdAt ?? new Date(0)),
   );
-  const showHr = (d.businessUnit?.requiresHrApproval ?? true) || s === "PENDING_HR" || hrApprovedThisRound;
+  // A finished request keeps the route it took (from its actions); an open one predicts from the unit's setting.
+  const showHr =
+    s === "APPROVED" ? hrApprovedThisRound : (d.businessUnit?.requiresHrApproval ?? true) || s === "PENDING_HR" || hrApprovedThisRound;
 
   return [
     first,

@@ -117,4 +117,17 @@ describe("buildStations", () => {
       expect(keys(detail("PENDING_LND", upToLnd, null))).toContain("hr");
     });
   });
+
+  describe("finished requests keep the route they actually took", () => {
+    const upToLnd = [
+      { action: "SUBMIT", fromStatus: "DRAFT", m: 1 },
+      { action: "APPROVE", fromStatus: "PENDING_HOD", m: 2 },
+      { action: "APPROVE", fromStatus: "PENDING_BU", m: 3 },
+    ];
+    it("a Malls request finalised by L&D shows no HR station after the unit is switched back to HR Head", () => {
+      const d = detail("APPROVED", [...upToLnd, { action: "APPROVE", fromStatus: "PENDING_LND", m: 4 }], { name: "Malls", requiresHrApproval: true });
+      expect(buildStations(d, { hod: "Tan", bu: "Lee", hr: "Farah" }).map((s) => s.key)).toEqual(["submit", "hod", "bu", "lnd", "final"]);
+    });
+  });
 });
+
