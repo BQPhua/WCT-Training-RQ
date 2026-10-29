@@ -83,7 +83,10 @@ export function transition(
     }
 
     case "APPROVE": {
-      const next = APPROVE_NEXT[from];
+      const next =
+        from === "PENDING_LND" && req.requiresHrApproval === false
+          ? { to: "APPROVED" as const, kind: "FINAL_APPROVED" as const }
+          : APPROVE_NEXT[from];
       if (!next) throw new WorkflowError("INVALID_STATE");
       const check = approverCheck(req, actor, counts);
       if (!check.ok) throw new WorkflowError("FORBIDDEN");

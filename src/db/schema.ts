@@ -54,6 +54,8 @@ export const businessUnits = pgTable("business_units", {
   code: text("code").notNull().unique(),
   name: text("name").notNull(),
   isActive: boolean("is_active").notNull().default(true),
+  /** E&C needs HR Head's final approval; Land and Malls are finalised by L&D. */
+  requiresHrApproval: boolean("requires_hr_approval").notNull().default(true),
   createdAt: createdAt(),
 });
 

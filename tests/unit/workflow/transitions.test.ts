@@ -119,6 +119,29 @@ describe("L&D stage", () => {
   it("non-L&D user is forbidden", () => {
     expect(code(() => transition(req("PENDING_LND"), hodLand, { type: "APPROVE" }, counts))).toBe("FORBIDDEN");
   });
+
+  it("L&D approval goes to PENDING_HR when requiresHrApproval", () => {
+    const r = transition(req("PENDING_LND", { requiresHrApproval: true }), lnd, { type: "APPROVE" }, counts);
+    expect(r.toStatus).toBe("PENDING_HR");
+    expect(r.event.kind).toBe("LND_APPROVED");
+  });
+
+  it("L&D approval is final when HR approval is not required", () => {
+    const r = transition(req("PENDING_LND", { requiresHrApproval: false }), lnd, { type: "APPROVE" }, counts);
+    expect(r.toStatus).toBe("APPROVED");
+    expect(r.event.kind).toBe("FINAL_APPROVED");
+  });
+
+  it("HR Head can still approve PENDING_HR when the flag is false", () => {
+    const r = transition(req("PENDING_HR", { requiresHrApproval: false }), hr, { type: "APPROVE" }, counts);
+    expect(r.toStatus).toBe("APPROVED");
+    expect(r.event.kind).toBe("FINAL_APPROVED");
+  });
+
+  it("allowed actions at PENDING_LND do not depend on the flag", () => {
+    const types = (flag: boolean) => getAllowedActions(req("PENDING_LND", { requiresHrApproval: flag }), lnd, counts).map((a) => a.type);
+    expect(types(false)).toEqual(types(true));
+  });
 });
 
 describe("HR Head stage", () => {

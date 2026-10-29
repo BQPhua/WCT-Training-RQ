@@ -32,29 +32,33 @@ const TRAININGS = [
   ["Facilities Energy Management", "Malaysian Green Building Council", "1350.00"],
 ] as const;
 
-const REQUESTERS = ["requester@demo.wct.my", "requester.malls@demo.wct.my", "hod.enc@demo.wct.my"];
+const REQUESTERS = ["requester@demo.wct.my", "requester.malls@demo.wct.my", "requester.enc@demo.wct.my"];
 const HOD_OF: Record<string, string> = {
   "requester@demo.wct.my": "hod.land@demo.wct.my",
   "requester.malls@demo.wct.my": "hod.malls@demo.wct.my",
-  "hod.enc@demo.wct.my": "hod.enc@demo.wct.my",
+  "requester.enc@demo.wct.my": "hod.enc@demo.wct.my",
 };
 const BU_ADMIN_OF: Record<string, string> = {
   "requester@demo.wct.my": "buadmin.land@demo.wct.my",
   "requester.malls@demo.wct.my": "buadmin.malls@demo.wct.my",
-  "hod.enc@demo.wct.my": "buadmin.enc@demo.wct.my",
+  "requester.enc@demo.wct.my": "buadmin.enc@demo.wct.my",
 };
-/** Every status, the BU Admin step, and rejections that restart at the HOD. */
+/**
+ * Every status, the BU Admin step, and rejections that restart at the HOD.
+ * Requesters rotate Land, Malls, E&C, so plan i goes to REQUESTERS[i % 3]:
+ * Land and Malls finish at L&D; the E&C plans (2, 5, 8) show HR Head's step.
+ */
 const PLANS: string[][] = [
-  ["SUBMIT", "HOD", "BU", "LND", "HR"],
+  ["SUBMIT", "HOD", "BU", "LND"],
   ["SUBMIT"],
-  ["SUBMIT", "HOD"],
+  ["SUBMIT", "HOD", "BU", "LND"],
   ["SUBMIT", "HOD", "BU"],
+  ["SUBMIT", "HOD", "BU", "LND"],
   ["SUBMIT", "HOD", "BU", "LND", "HR"],
   ["SUBMIT", "HOD", "BU_REJECT"],
-  ["SUBMIT", "HOD", "BU", "LND"],
   ["SUBMIT", "HOD", "BU", "LND_REJECT", "RESUBMIT"],
+  ["SUBMIT", "HOD"],
   ["SUBMIT", "CANCEL"],
-  ["SUBMIT", "HOD", "BU", "LND", "HR"],
 ];
 const RELEVANCY = [
   "The team applies this daily on live projects; current skills gaps were raised in the last performance review.",

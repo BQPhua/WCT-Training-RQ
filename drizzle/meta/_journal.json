@@ -15,6 +15,13 @@
       "when": 1792048292978,
       "tag": "0001_bu_stage_relevancy_namelist",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793242890882,
+      "tag": "0002_bu_requires_hr_approval",
+      "breakpoints": true
     }
   ]
 }

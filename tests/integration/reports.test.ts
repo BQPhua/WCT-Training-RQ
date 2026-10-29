@@ -19,7 +19,12 @@ async function approved(email: string, hod: string, fee: string, n: number) {
   const { id } = await createDraft(u, { ...validDraft, feePerPax: fee, candidates: Array.from({ length: n }, (_, i) => ({ name: `Person ${i}` })) });
   let v = (await performAction(u, { requestId: id, version: 1, type: "SUBMIT" })).version;
   const bua = hod.replace("hod.", "buadmin.");
-  for (const a of [hod, bua, "lnd1@demo.wct.my", "hrhead@demo.wct.my"]) v = (await performAction(await asUser(a), { requestId: id, version: v, type: "APPROVE" })).version;
+  // Land and Malls are finalised by L&D; E&C goes on to HR Head.
+  for (const a of [hod, bua, "lnd1@demo.wct.my", "hrhead@demo.wct.my"]) {
+    const r = await performAction(await asUser(a), { requestId: id, version: v, type: "APPROVE" });
+    v = r.version;
+    if (r.status === "APPROVED") break;
+  }
 }
 
 describe("getReports", () => {
@@ -54,7 +59,7 @@ describe("getReports", () => {
     await saveAttachment(u, id, { name: "names.csv", type: "text/csv", bytes: new TextEncoder().encode("Name\nA\n") }, "NAME_LIST");
     let v = (await updateContent(u, id, 1, { ...validDraft, feePerPax: "100.00", candidates: [], participantCount: 25 })).version;
     v = (await performAction(u, { requestId: id, version: v, type: "SUBMIT" })).version;
-    for (const a of ["hod.land@demo.wct.my", "buadmin.land@demo.wct.my", "lnd1@demo.wct.my", "hrhead@demo.wct.my"]) v = (await performAction(await asUser(a), { requestId: id, version: v, type: "APPROVE" })).version;
+    for (const a of ["hod.land@demo.wct.my", "buadmin.land@demo.wct.my", "lnd1@demo.wct.my"]) v = (await performAction(await asUser(a), { requestId: id, version: v, type: "APPROVE" })).version;
     const r = await getReports(await asUser("hrhead@demo.wct.my"), { year });
     expect(r.totals.approvedFees).toBe("2500.00");
   });
