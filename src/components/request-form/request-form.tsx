@@ -43,14 +43,18 @@ export interface RequestFormProps {
   departments: { id: string; name: string; buName: string }[];
 }
 
-const LABEL = "text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-2";
+const LABEL = "text-[13px] font-medium text-ink-2";
 
 function Section({ n, title, children, aside }: { n: number; title: string; children: React.ReactNode; aside?: React.ReactNode }) {
   return (
-    <Panel aria-labelledby={`sec-${n}`} className="animate-rise">
-      <div className="flex items-baseline justify-between gap-3 border-b border-line px-5 py-3.5 sm:px-6">
-        <h2 id={`sec-${n}`} className="text-[13px] font-semibold uppercase tracking-[0.08em] text-ink">
-          <span className="mr-2 tabular text-brand-text">Section {n}</span>
+    <Panel aria-labelledby={`sec-${n}`}>
+      <div className="flex items-center justify-between gap-3 border-b border-line px-5 py-4 sm:px-6">
+        <h2 id={`sec-${n}`} className="flex items-center gap-3 text-[15px] font-semibold text-ink">
+          {/* Numbered like the paper form's sections (WCT-F-4.18-2). */}
+          <span className="grid size-7 shrink-0 place-items-center rounded-full bg-info-soft text-[13px] font-semibold tabular text-info-text ring-1 ring-info/25">
+            <span className="sr-only">Section </span>
+            {n}
+          </span>
           {title}
         </h2>
         {aside}
@@ -236,7 +240,7 @@ export function RequestForm(props: RequestFormProps) {
         e.preventDefault();
         openReview();
       }}
-      className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_300px] [&>*]:min-w-0"
+      className="grid grid-cols-1 gap-6 pb-32 xl:grid-cols-[minmax(0,1fr)_300px] xl:pb-0 [&>*]:min-w-0"
     >
       <div className="min-w-0 space-y-5">
         <Section n={1} title="General details">
@@ -283,7 +287,7 @@ export function RequestForm(props: RequestFormProps) {
         <Section n={2} title="Training program details">
           <p className="text-sm text-muted">I would like to propose the following staff to attend the training program detailed below.</p>
           <fieldset>
-            <legend className="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-2">
+            <legend className="mb-2 text-[13px] font-medium text-ink-2">
               Training type<span className="ml-0.5 text-danger" aria-hidden>*</span>
             </legend>
             <div className="grid gap-2 sm:grid-cols-2" id="trainingType" tabIndex={-1}>
@@ -295,7 +299,7 @@ export function RequestForm(props: RequestFormProps) {
                   key={value}
                   className={cn(
                     "flex cursor-pointer gap-3 rounded-lg border p-3.5 transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-focus",
-                    v.trainingType === value ? "border-brand bg-brand-soft/50" : "border-line-strong hover:border-ink-2/40",
+                    v.trainingType === value ? "border-info bg-info-soft/60 ring-1 ring-info/30" : "border-line-strong hover:border-ink-2/40",
                     errors.trainingType && "border-danger",
                   )}
                 >
@@ -382,7 +386,7 @@ export function RequestForm(props: RequestFormProps) {
                   key={value}
                   className={cn(
                     "flex cursor-pointer gap-3 rounded-lg border p-3.5 transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-focus",
-                    mode === value ? "border-brand bg-brand-soft/50" : "border-line-strong hover:border-ink-2/40",
+                    mode === value ? "border-info bg-info-soft/60 ring-1 ring-info/30" : "border-line-strong hover:border-ink-2/40",
                   )}
                 >
                   <input type="radio" name="participantMode" value={value} checked={mode === value} onChange={() => chooseMode(value)} className="mt-0.5 size-4" />
@@ -425,9 +429,9 @@ export function RequestForm(props: RequestFormProps) {
           )}
         </Section>
 
-        <Panel className="animate-rise">
+        <Panel>
           <div className="border-b border-line px-5 py-3.5 sm:px-6">
-            <h2 className="text-[13px] font-semibold uppercase tracking-[0.08em] text-ink">Supporting documents</h2>
+            <h2 className="text-[15px] font-semibold text-ink">Supporting documents</h2>
           </div>
           <div className="px-5 py-5 sm:px-6">
             <AttachmentField items={attachments} onChange={setAttachments} ensureSaved={async () => id ?? (await saveDraft("silent"))?.id ?? null} />
@@ -461,14 +465,17 @@ export function RequestForm(props: RequestFormProps) {
               ))}
             </ol>
           </div>
-          <div className="flex flex-col gap-2 border-t border-line bg-surface-2 px-5 py-4">
-            <Button type="submit" variant="brand" size="lg" disabled={saving || submitting}>
-              <Send /> {props.isReturned ? "Review & resubmit" : "Review & submit"}
-            </Button>
-            <Button type="button" variant="outline" onClick={() => saveDraft("manual")} disabled={saving || submitting}>
-              {saving ? <Loader2 className="animate-spin" /> : <Save />} Save draft
-            </Button>
-            <p className="text-center text-xs text-muted" aria-live="polite">
+          {/* Below 1280px this block is pinned to the bottom of the screen, so the actions are always in reach. */}
+          <div className="flex flex-col gap-2 border-t border-line bg-surface-2 px-5 py-4 max-xl:fixed max-xl:inset-x-0 max-xl:bottom-0 max-xl:z-20 max-xl:bg-surface/95 max-xl:px-4 max-xl:pb-[max(0.75rem,env(safe-area-inset-bottom))] max-xl:pt-3 max-xl:shadow-[0_-10px_28px_-14px_oklch(0.22_0.045_268/0.3)] max-xl:backdrop-blur-md lg:max-xl:left-64">
+            <div className="grid grid-cols-[1fr_1.5fr] gap-2 xl:flex xl:flex-col">
+              <Button type="submit" variant="brand" size="lg" className="order-2 xl:order-1" disabled={saving || submitting}>
+                <Send /> {props.isReturned ? "Review & resubmit" : "Review & submit"}
+              </Button>
+              <Button type="button" variant="outline" size="lg" className="order-1 xl:order-2 xl:h-10 xl:text-sm" onClick={() => saveDraft("manual")} disabled={saving || submitting}>
+                {saving ? <Loader2 className="animate-spin" /> : <Save />} Save draft
+              </Button>
+            </div>
+            <p className="min-h-4 text-center text-xs text-muted" aria-live="polite">
               {saving
                 ? "Saving…"
                 : dirty

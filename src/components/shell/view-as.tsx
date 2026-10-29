@@ -81,7 +81,7 @@ export function ViewAsBanner({ name, roleLabel }: { name: string; roleLabel: str
     setBusy(false);
   }
   return (
-    <div role="status" className="sticky top-0 z-40 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 border-b border-info/25 bg-info-soft px-4 py-2 text-sm text-info-text">
+    <div role="status" className="relative z-40 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 border-b border-info/25 bg-info-soft lg:sticky lg:top-0 px-4 py-2 text-sm text-info-text">
       <Eye className="size-4 shrink-0" aria-hidden />
       <span>
         Viewing as <b className="font-semibold">{name}</b> · {roleLabel}
@@ -101,7 +101,7 @@ export function ViewAsBanner({ name, roleLabel }: { name: string; roleLabel: str
 /** Shown to everyone signed in with a demo account from the sign-in page. */
 export function DemoBanner({ name, roleLabel }: { name: string; roleLabel: string }) {
   return (
-    <div role="status" className="sticky top-0 z-40 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 border-b border-info/25 bg-info-soft px-4 py-2 text-sm text-info-text">
+    <div role="status" className="relative z-40 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 border-b border-info/25 bg-info-soft lg:sticky lg:top-0 px-4 py-2 text-sm text-info-text">
       <Eye className="size-4 shrink-0" aria-hidden />
       <span>
         Demo account: <b className="font-semibold">{name}</b> · {roleLabel}. You&apos;re seeing demo requests only.

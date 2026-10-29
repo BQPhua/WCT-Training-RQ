@@ -58,12 +58,12 @@ export default async function RequestDetailPage({ params, searchParams }: PagePr
   return (
     <div className="space-y-6">
       {sp.submitted && (
-        <p role="status" className="animate-rise rounded-lg bg-approved-soft px-4 py-3 text-sm text-approved-text">
+        <p role="status" className="rounded-lg bg-approved-soft px-4 py-3 text-sm text-approved-text">
           Submitted. {d.department?.hod?.name ?? "Your HOD"} has been notified and the request is now on the board.
         </p>
       )}
 
-      <header className="flex flex-wrap items-start justify-between gap-4 animate-rise">
+      <header className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2.5">
             <span className="rounded-md bg-shell px-2 py-0.5 text-[13px] font-semibold tabular tracking-tight text-shell-fg">{r.refNo ?? "Draft"}</span>

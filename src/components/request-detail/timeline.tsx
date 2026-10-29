@@ -23,7 +23,7 @@ const META: Record<string, { icon: typeof Check; tone: string; verb: string }> =
   APPROVE: { icon: Check, tone: "bg-approved text-white", verb: "approved" },
   REJECT: { icon: CornerUpLeft, tone: "bg-returned text-white", verb: "rejected and returned it to the requester" },
   CANCEL: { icon: Ban, tone: "bg-cancelled text-white", verb: "cancelled the request" },
-  EDIT_LND_FIELDS: { icon: PencilLine, tone: "bg-brand-soft text-brand-text", verb: "updated the L&D details" },
+  EDIT_LND_FIELDS: { icon: PencilLine, tone: "bg-info-soft text-info-text", verb: "updated the L&D details" },
 };
 
 const STAGE_OF_FROM: Partial<Record<Status, string>> = { PENDING_HOD: "Department HOD", PENDING_BU: "BU Admin", PENDING_LND: "L&D", PENDING_HR: "HR Head" };
@@ -48,7 +48,7 @@ export function Timeline({ actions }: { actions: TimelineAction[] }) {
                 {a.action === "APPROVE" && a.fromStatus === "PENDING_LND" && a.toStatus === "APPROVED" && (
                   <span className="ml-2 rounded bg-approved-soft px-1.5 py-0.5 text-[11px] font-medium text-approved-text">{"Final approval (L&D)"}</span>
                 )}
-                {a.selfApproved && <span className="ml-2 rounded bg-brand-soft px-1.5 py-0.5 text-[11px] font-medium text-brand-text">Self-approved</span>}
+                {a.selfApproved && <span className="ml-2 rounded bg-info-soft px-1.5 py-0.5 text-[11px] font-medium text-info-text">Self-approved</span>}
               </p>
               <p className="mt-0.5 text-xs tabular text-muted">
                 {formatDateTimeMY(a.createdAt)}

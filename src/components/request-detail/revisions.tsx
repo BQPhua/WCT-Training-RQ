@@ -43,7 +43,7 @@ export function Revisions({ revisions }: { revisions: { id: string; revisionNo: 
               <span className="text-sm font-semibold text-ink">Version {rev.revisionNo}</span>
               <span className="text-xs tabular text-muted">{formatDateTimeMY(rev.createdAt)}</span>
               {prev && (
-                <span className="text-xs text-brand-text">
+                <span className="text-xs text-info-text">
                   {changed.length ? `${changed.length} field${changed.length > 1 ? "s" : ""} changed` : "No content changes"}
                 </span>
               )}
@@ -54,7 +54,7 @@ export function Revisions({ revisions }: { revisions: { id: string; revisionNo: 
                 return (
                   <div key={k} className="contents">
                     <dt className="py-1 text-muted">{label}</dt>
-                    <dd className={cn("py-1 text-ink", isChanged && "rounded bg-brand-soft px-1.5")}>
+                    <dd className={cn("py-1 text-ink", isChanged && "rounded bg-info-soft px-1.5")}>
                       {show(k, rev.snapshot)}
                       {isChanged && prev && <span className="ml-2 text-xs text-muted line-through">{show(k, prev.snapshot)}</span>}
                     </dd>

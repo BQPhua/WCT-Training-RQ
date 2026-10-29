@@ -28,7 +28,7 @@ export default async function EditRequestPage({ params, searchParams }: PageProp
         description="Training Requisition Form"
         actions={<StatusBadge status={detail.request.status} />}
       />
-      {sp.cloned && <p className="mb-5 rounded-lg bg-brand-soft px-4 py-3 text-sm text-ink">This is a copy. Check the dates and candidates before submitting.</p>}
+      {sp.cloned && <p className="mb-5 rounded-lg bg-info-soft px-4 py-3 text-sm text-info-text">This is a copy. Check the dates and candidates before submitting.</p>}
       {isReturned && lastReject && (
         <div className="mb-5 flex gap-3 rounded-xl border border-returned/30 bg-returned-soft px-4 py-3.5">
           <CornerUpLeft className="mt-0.5 size-4 shrink-0 text-returned-text" />

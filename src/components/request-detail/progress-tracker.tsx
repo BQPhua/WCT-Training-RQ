@@ -28,11 +28,11 @@ export function ProgressTracker({ stations, status }: { stations: TrackerStation
             {!last && (
               <span
                 aria-hidden
-                className={cn(
-                  "absolute left-[13px] top-7 h-[calc(100%-1.25rem)] w-[3px] rounded-full sm:left-7 sm:top-[13px] sm:h-[3px] sm:w-[calc(100%-1.75rem)]",
-                  lineDone ? "bg-approved" : "bg-line",
-                )}
-              />
+                className="absolute left-[13px] top-7 h-[calc(100%-1.25rem)] w-[3px] overflow-hidden rounded-full bg-line sm:left-7 sm:top-[13px] sm:h-[3px] sm:w-[calc(100%-1.75rem)]"
+              >
+                {/* Completed legs light up one after another, like street lights coming on. */}
+                {lineDone && <span className="route-fill absolute inset-0 rounded-full bg-approved" style={{ animationDelay: `${i * 110}ms` }} />}
+              </span>
             )}
             <span
               className={cn(

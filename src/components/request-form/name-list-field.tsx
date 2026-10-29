@@ -64,7 +64,7 @@ export function NameListField({
             {nameList.originalName}
           </a>
           <span className="text-xs tabular text-muted">{formatBytes(nameList.sizeBytes)}</span>
-          <label className="cursor-pointer rounded-md px-2 py-1 text-xs font-medium text-brand-text hover:bg-brand-soft has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-focus">
+          <label className="cursor-pointer rounded-md px-2 py-1 text-xs font-medium text-info-text hover:bg-info-soft has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-focus">
             Replace
             <input type="file" accept={NAME_LIST_ACCEPT_ATTR} className="sr-only" onChange={(e) => upload(e.target.files?.[0])} disabled={busy} />
           </label>
