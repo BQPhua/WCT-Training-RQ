@@ -3,102 +3,118 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 /* ------------------------------------------------------------------
-   WCT Training RQ — "sales-gallery board" world.
-   Ink-navy shell, brass brand accent (swappable: --brand-*), crisp white
-   work surfaces, and a fixed status vocabulary used everywhere.
-   Brand tokens are placeholders until WCT supplies official colours.
+   WCT Training RQ — "Twilight".
+   WCT at dusk: the twilight sky of the Paradigm Mall photo is the shell,
+   WCT's red signage is the one signal for "act here", and white work
+   cards sit on a cool ground. Status colours are reserved for status.
 ------------------------------------------------------------------- */
 :root {
   color-scheme: light;
 
-  --ground: oklch(0.972 0.006 255);
+  --ground: oklch(0.975 0.006 265);
   --surface: oklch(1 0 0);
-  --surface-2: oklch(0.985 0.004 255);
-  --ink: oklch(0.235 0.035 258);
-  --ink-2: oklch(0.42 0.03 258);
-  --muted: oklch(0.52 0.022 258);
-  --line: oklch(0.912 0.01 255);
-  --line-strong: oklch(0.86 0.014 255);
+  --surface-2: oklch(0.982 0.005 265);
+  --ink: oklch(0.22 0.045 268);
+  --ink-2: oklch(0.4 0.04 268);
+  --muted: oklch(0.5 0.03 268);
+  --line: oklch(0.915 0.012 265);
+  --line-strong: oklch(0.855 0.018 265);
 
-  --shell: oklch(0.225 0.048 259);
-  --shell-2: oklch(0.275 0.052 259);
-  --shell-line: oklch(0.32 0.045 259);
-  --shell-fg: oklch(0.95 0.01 255);
-  --shell-muted: oklch(0.76 0.03 258);
+  /* Twilight shell: deep indigo-navy at the top, lifting toward the horizon */
+  --shell: oklch(0.21 0.065 270);
+  --shell-dusk: oklch(0.285 0.085 264);
+  --shell-2: oklch(0.3 0.075 268);
+  --shell-line: oklch(0.34 0.06 268);
+  --shell-fg: oklch(0.965 0.01 265);
+  --shell-muted: oklch(0.8 0.04 265);
 
-  /* Brand (brass) — replace with WCT corporate colour when supplied */
-  --brand: oklch(0.7 0.105 72);
-  --brand-hover: oklch(0.66 0.11 70);
-  --brand-fg: oklch(0.21 0.04 258);
-  --brand-text: oklch(0.5 0.095 66);
-  --brand-soft: oklch(0.96 0.03 80);
+  /* WCT red (logo #E30613) */
+  --brand: oklch(0.578 0.233 27.6);
+  --brand-hover: oklch(0.52 0.215 27);
+  --brand-fg: oklch(1 0 0);
+  --brand-text: oklch(0.52 0.21 27);
+  --brand-soft: oklch(0.962 0.024 22);
 
-  /* Status vocabulary (sales-chart logic: settled green, booked amber, returned coral) */
+  /* Sky blue from the dusk photo: links, info, focus */
+  --info: oklch(0.62 0.14 258);
+  --info-soft: oklch(0.955 0.03 258);
+  --info-text: oklch(0.45 0.14 262);
+
+  /* Status vocabulary: approved green, pending sky, returned orange, cancelled slate, draft grey */
   --st-approved: oklch(0.6 0.13 155);
-  --st-approved-soft: oklch(0.95 0.04 155);
+  --st-approved-soft: oklch(0.955 0.04 155);
   --st-approved-text: oklch(0.42 0.1 155);
-  --st-pending: oklch(0.8 0.15 86);
-  --st-pending-soft: oklch(0.96 0.06 92);
-  --st-pending-text: oklch(0.47 0.1 70);
-  --st-returned: oklch(0.66 0.17 32);
-  --st-returned-soft: oklch(0.955 0.035 32);
-  --st-returned-text: oklch(0.5 0.16 32);
-  --st-cancelled: oklch(0.7 0.015 258);
-  --st-cancelled-soft: oklch(0.95 0.006 258);
-  --st-cancelled-text: oklch(0.47 0.02 258);
-  --st-draft: oklch(0.93 0.008 258);
-  --st-draft-text: oklch(0.45 0.02 258);
+  --st-pending: oklch(0.64 0.14 255);
+  --st-pending-soft: oklch(0.955 0.03 255);
+  --st-pending-text: oklch(0.45 0.13 260);
+  --st-returned: oklch(0.7 0.16 55);
+  --st-returned-soft: oklch(0.962 0.04 62);
+  --st-returned-text: oklch(0.49 0.13 50);
+  --st-cancelled: oklch(0.7 0.015 265);
+  --st-cancelled-soft: oklch(0.95 0.006 265);
+  --st-cancelled-text: oklch(0.47 0.02 265);
+  --st-draft: oklch(0.93 0.008 265);
+  --st-draft-text: oklch(0.45 0.02 265);
 
-  --danger: oklch(0.56 0.19 27);
-  --danger-soft: oklch(0.96 0.03 27);
-  --focus: oklch(0.6 0.13 245);
+  --danger: oklch(0.5 0.19 22);
+  --danger-soft: oklch(0.965 0.022 22);
+  --focus: oklch(0.58 0.15 258);
 
-  --radius: 0.625rem;
-  --shadow-sm: 0 1px 2px oklch(0.235 0.035 258 / 0.06), 0 1px 1px oklch(0.235 0.035 258 / 0.04);
-  --shadow-md: 0 4px 14px -4px oklch(0.235 0.035 258 / 0.14), 0 2px 4px -2px oklch(0.235 0.035 258 / 0.08);
-  --shadow-lg: 0 18px 40px -12px oklch(0.235 0.035 258 / 0.28);
+  --radius: 0.75rem;
+  --shadow-sm: 0 1px 2px oklch(0.22 0.045 268 / 0.05), 0 1px 3px oklch(0.22 0.045 268 / 0.05);
+  --shadow-md: 0 2px 4px -1px oklch(0.22 0.045 268 / 0.06), 0 10px 24px -8px oklch(0.22 0.045 268 / 0.16);
+  --shadow-lg: 0 4px 8px -2px oklch(0.22 0.045 268 / 0.08), 0 28px 56px -18px oklch(0.22 0.045 268 / 0.32);
 }
 
 .dark {
   color-scheme: dark;
 
-  --ground: oklch(0.175 0.028 259);
-  --surface: oklch(0.215 0.032 259);
-  --surface-2: oklch(0.235 0.034 259);
-  --ink: oklch(0.95 0.01 255);
-  --ink-2: oklch(0.83 0.02 258);
-  --muted: oklch(0.7 0.025 258);
-  --line: oklch(0.3 0.03 259);
-  --line-strong: oklch(0.36 0.034 259);
+  --ground: oklch(0.165 0.035 268);
+  --surface: oklch(0.205 0.04 268);
+  --surface-2: oklch(0.228 0.042 268);
+  --ink: oklch(0.95 0.01 265);
+  --ink-2: oklch(0.84 0.02 265);
+  --muted: oklch(0.72 0.03 265);
+  --line: oklch(0.29 0.04 268);
+  --line-strong: oklch(0.36 0.045 268);
 
-  --shell: oklch(0.14 0.03 259);
-  --shell-2: oklch(0.2 0.038 259);
-  --shell-line: oklch(0.25 0.035 259);
+  --shell: oklch(0.135 0.04 270);
+  --shell-dusk: oklch(0.19 0.06 266);
+  --shell-2: oklch(0.24 0.06 268);
+  --shell-line: oklch(0.26 0.05 268);
 
-  --brand: oklch(0.76 0.105 75);
-  --brand-hover: oklch(0.8 0.1 78);
-  --brand-fg: oklch(0.18 0.035 258);
-  --brand-text: oklch(0.8 0.1 76);
-  --brand-soft: oklch(0.3 0.045 70);
+  --brand: oklch(0.578 0.233 27.6);
+  --brand-hover: oklch(0.62 0.22 27);
+  --brand-fg: oklch(1 0 0);
+  --brand-text: oklch(0.74 0.15 25);
+  --brand-soft: oklch(0.3 0.08 25);
 
+  --info: oklch(0.7 0.13 255);
+  --info-soft: oklch(0.3 0.06 260);
+  --info-text: oklch(0.82 0.1 255);
+
+  --st-approved: oklch(0.68 0.14 155);
   --st-approved-soft: oklch(0.3 0.05 155);
   --st-approved-text: oklch(0.82 0.12 155);
-  --st-pending-soft: oklch(0.32 0.06 85);
-  --st-pending-text: oklch(0.86 0.13 88);
-  --st-returned-soft: oklch(0.31 0.07 32);
-  --st-returned-text: oklch(0.82 0.12 35);
-  --st-cancelled-soft: oklch(0.28 0.015 258);
-  --st-cancelled-text: oklch(0.78 0.02 258);
-  --st-draft: oklch(0.3 0.02 258);
-  --st-draft-text: oklch(0.8 0.02 258);
+  --st-pending: oklch(0.7 0.13 255);
+  --st-pending-soft: oklch(0.3 0.06 258);
+  --st-pending-text: oklch(0.84 0.09 255);
+  --st-returned: oklch(0.74 0.15 58);
+  --st-returned-soft: oklch(0.32 0.06 55);
+  --st-returned-text: oklch(0.85 0.11 60);
+  --st-cancelled: oklch(0.6 0.015 265);
+  --st-cancelled-soft: oklch(0.28 0.015 265);
+  --st-cancelled-text: oklch(0.78 0.02 265);
+  --st-draft: oklch(0.3 0.02 265);
+  --st-draft-text: oklch(0.8 0.02 265);
 
-  --danger: oklch(0.7 0.17 27);
-  --danger-soft: oklch(0.3 0.07 27);
-  --focus: oklch(0.72 0.12 245);
+  --danger: oklch(0.72 0.17 22);
+  --danger-soft: oklch(0.3 0.07 22);
+  --focus: oklch(0.74 0.12 255);
 
   --shadow-sm: 0 1px 2px oklch(0 0 0 / 0.3);
-  --shadow-md: 0 6px 16px -6px oklch(0 0 0 / 0.5);
-  --shadow-lg: 0 20px 44px -12px oklch(0 0 0 / 0.6);
+  --shadow-md: 0 2px 4px -1px oklch(0 0 0 / 0.3), 0 10px 24px -8px oklch(0 0 0 / 0.5);
+  --shadow-lg: 0 4px 8px -2px oklch(0 0 0 / 0.35), 0 28px 56px -18px oklch(0 0 0 / 0.65);
 }
 
 @theme inline {
@@ -115,6 +131,7 @@
   --color-line-strong: var(--line-strong);
   --color-shell: var(--shell);
   --color-shell-2: var(--shell-2);
+  --color-shell-dusk: var(--shell-dusk);
   --color-shell-line: var(--shell-line);
   --color-shell-fg: var(--shell-fg);
   --color-shell-muted: var(--shell-muted);
@@ -123,6 +140,9 @@
   --color-brand-fg: var(--brand-fg);
   --color-brand-text: var(--brand-text);
   --color-brand-soft: var(--brand-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-info-text: var(--info-text);
   --color-approved: var(--st-approved);
   --color-approved-soft: var(--st-approved-soft);
   --color-approved-text: var(--st-approved-text);
@@ -169,7 +189,7 @@
 
 @layer base {
   html {
-    accent-color: var(--brand);
+    accent-color: var(--info);
     scrollbar-color: var(--line-strong) transparent;
     scrollbar-width: thin;
     -webkit-tap-highlight-color: transparent;
@@ -182,7 +202,7 @@
     text-rendering: optimizeLegibility;
   }
   ::selection {
-    background: color-mix(in oklch, var(--brand) 38%, transparent);
+    background: color-mix(in oklch, var(--info) 32%, transparent);
     color: var(--ink);
   }
   :focus-visible {
@@ -196,6 +216,7 @@
   input::placeholder, textarea::placeholder { color: color-mix(in oklch, var(--muted) 80%, transparent); }
   .tabular, table { font-variant-numeric: tabular-nums; }
   [data-shell] { scrollbar-color: var(--shell-line) transparent; }
+  [data-shell] :focus-visible { outline-color: var(--shell-fg); }
 }
 
 /* Field validation only after interaction (:user-invalid). */
@@ -215,7 +236,7 @@
   }
 }
 
-/* Data-viz series from the world (ink-navy, brass, rose) — validated all-pairs, light & dark,
-   with dataviz/validate_palette.js; kept clear of the reserved status colours. */
-:root { --series-1: #2e5a9c; --series-2: #a8742a; --series-3: #c75b8e; --grid: oklch(0.93 0.008 255); }
-.dark { --series-1: #4a7cc4; --series-2: #b8862f; --series-3: #d36a9c; --grid: oklch(0.3 0.025 259); }
+/* Data-viz series (indigo, magenta, gold): validated with dataviz/validate_palette.js in light
+   (surface white) and dark (#1a2033); kept clear of the status hues and of WCT red. */
+:root { --series-1: #4338ca; --series-2: #be3d87; --series-3: #a87b12; --grid: oklch(0.93 0.008 265); }
+.dark { --series-1: #7c7cf0; --series-2: #d65c9c; --series-3: #b8892a; --grid: oklch(0.3 0.03 268); }

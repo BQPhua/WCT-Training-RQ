@@ -2,7 +2,7 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 const control =
-  "field-control w-full rounded-md border border-line-strong bg-surface px-3 text-[15px] sm:text-sm text-ink shadow-sm transition-[border-color,box-shadow] outline-none placeholder:text-muted hover:border-ink-2/40 focus-visible:border-focus focus-visible:ring-[3px] focus-visible:ring-focus/20 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60";
+  "field-control w-full rounded-md border border-line-strong bg-surface px-3 text-[15px] sm:text-sm text-ink shadow-[inset_0_1px_1px_oklch(0.22_0.045_268/0.04)] transition-[border-color,box-shadow] duration-150 outline-none placeholder:text-muted hover:border-ink-2/40 focus-visible:border-focus focus-visible:ring-[3px] focus-visible:ring-focus/25 focus-visible:outline-none disabled:cursor-not-allowed disabled:bg-surface-2 disabled:opacity-70";
 
 export function Input({ className, ...props }: React.ComponentProps<"input">) {
   return <input className={cn(control, "h-10", className)} {...props} />;
@@ -25,9 +25,9 @@ export function NativeSelect({ className, children, ...props }: React.ComponentP
   );
 }
 
-/** Uppercase tracked label — the paper form's field-label voice. */
+/** Sentence-case field label. */
 export function Label({ className, ...props }: React.ComponentProps<"label">) {
-  return <label className={cn("block text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-2", className)} {...props} />;
+  return <label className={cn("block text-[13px] font-medium text-ink-2", className)} {...props} />;
 }
 
 export function Field({
