@@ -3,9 +3,9 @@ import { db } from "./index";
 import { businessUnitAdmins, businessUnits, departments, roleAssignments, users } from "./schema";
 
 export const SEED_BUSINESS_UNITS = [
-  { code: "LAND", name: "Land" },
-  { code: "ENC", name: "E&C" },
-  { code: "MALLS", name: "Malls" },
+  { code: "LAND", name: "Land", requiresHrApproval: false },
+  { code: "ENC", name: "E&C", requiresHrApproval: true },
+  { code: "MALLS", name: "Malls", requiresHrApproval: false },
 ] as const;
 
 export const SEED_DEPARTMENTS: { name: string; bu: string }[] = [
@@ -31,6 +31,7 @@ type DemoUser = {
 /** Demo accounts for local development and end-to-end tests only. */
 export const DEMO_USERS: DemoUser[] = [
   { email: "requester@demo.wct.my", name: "Aisyah Rahman", jobTitle: "Project Engineer", dept: "Land – Project Management" },
+  { email: "requester.enc@demo.wct.my", name: "Amir Hakim", jobTitle: "Site Engineer", dept: "E&C – Engineering" },
   { email: "requester.malls@demo.wct.my", name: "Daniel Lim", jobTitle: "Mall Executive", dept: "Malls – Operations" },
   { email: "hod.land@demo.wct.my", name: "Tan Wei Ming", jobTitle: "Head of Project Management", dept: "Land – Project Management", hodOf: ["Land – Project Management", "Land – Sales & Marketing"] },
   { email: "hod.enc@demo.wct.my", name: "Siti Nurhaliza", jobTitle: "Head of Engineering", dept: "E&C – Engineering", hodOf: ["E&C – Engineering", "E&C – QS & Contracts"] },
@@ -49,7 +50,7 @@ export async function seed({ demo }: { demo: boolean }) {
   for (const bu of SEED_BUSINESS_UNITS) {
     await db
       .insert(businessUnits)
-      .values({ code: bu.code, name: bu.name })
+      .values({ code: bu.code, name: bu.name, requiresHrApproval: bu.requiresHrApproval })
       .onConflictDoNothing({ target: businessUnits.code });
   }
   const buRows = await db.select().from(businessUnits);

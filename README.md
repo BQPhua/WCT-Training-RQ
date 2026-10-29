@@ -3,7 +3,7 @@
 Digital **Training Requisition Form (WCT-F-4.18-2 REV2)** for WCT Berhad, served at
 **https://hrforms.wct.my/WCT-Training-RQ/**.
 
-Staff raise training requests, and approvals flow **Requester → Department HOD → BU Admin → L&D Team → HR Head**; any rejection returns the request to the requester, and resubmitting restarts at the HOD. Every decision is made inside the app, Power Automate sends the email/Teams notifications, and HR keeps a searchable history with Excel export and a printable PDF that mirrors the paper form.
+Staff raise training requests, and approvals flow **Requester → Department HOD → BU Admin → L&D Team**, which gives final approval for Land and Malls; E&C requests go on to the **HR Head** (set per business unit in Admin settings); any rejection returns the request to the requester, and resubmitting restarts at the HOD. Every decision is made inside the app, Power Automate sends the email/Teams notifications, and HR keeps a searchable history with Excel export and a printable PDF that mirrors the paper form.
 
 ![PDF preview](docs/pdf-preview.png)
 

@@ -1,16 +1,20 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { motion } from "motion/react";
 import { ClipboardCheck, FilePlus2, FolderClock, LayoutGrid, ListChecks, Settings2 } from "lucide-react";
+import { SPRING } from "@/components/motion/fade-rise";
 import { cn } from "@/lib/utils";
 
 export interface NavProps {
   approvals: number;
   isAdmin: boolean;
   onNavigate?: () => void;
+  /** Distinguishes the desktop rail from the mobile drawer, so each has its own active pill. */
+  instance?: string;
 }
 
-export function Nav({ approvals, isAdmin, onNavigate }: NavProps) {
+export function Nav({ approvals, isAdmin, onNavigate, instance = "rail" }: NavProps) {
   const pathname = usePathname();
   const items = [
     { href: "/dashboard", label: "Dashboard", icon: LayoutGrid },
@@ -21,7 +25,7 @@ export function Nav({ approvals, isAdmin, onNavigate }: NavProps) {
     ...(isAdmin ? [{ href: "/admin", label: "Admin settings", icon: Settings2 }] : []),
   ];
   return (
-    <nav aria-label="Main" className="space-y-0.5">
+    <nav aria-label="Main" className="space-y-1">
       {items.map(({ href, label, icon: Icon, badge }) => {
         const active = href === "/dashboard" ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
         return (
@@ -32,13 +36,25 @@ export function Nav({ approvals, isAdmin, onNavigate }: NavProps) {
             aria-current={active ? "page" : undefined}
             className={cn(
               "group relative flex h-10 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors",
-              active ? "bg-shell-2 text-shell-fg" : "text-shell-muted hover:bg-shell-2/60 hover:text-shell-fg",
+              active ? "text-shell-fg" : "text-shell-muted hover:bg-white/[0.06] hover:text-shell-fg",
             )}
           >
-            <Icon className={cn("size-[18px] shrink-0", active ? "text-brand" : "text-shell-muted group-hover:text-shell-fg")} />
-            <span className="truncate">{label}</span>
+            {/* The active pill glides to the new item when you navigate. */}
+            {active && (
+              <motion.span
+                layoutId={`nav-pill-${instance}`}
+                transition={SPRING}
+                aria-hidden
+                className="absolute inset-0 rounded-lg bg-white/[0.09] shadow-[inset_0_1px_0_oklch(1_0_0/0.08)] ring-1 ring-white/10"
+              />
+            )}
+            <Icon className={cn("relative size-[18px] shrink-0", active ? "text-shell-accent" : "text-shell-muted group-hover:text-shell-fg")} />
+            <span className="relative truncate">{label}</span>
             {!!badge && (
-              <span className="ml-auto min-w-6 rounded-full bg-brand px-1.5 py-0.5 text-center text-[11px] font-semibold text-brand-fg tabular">
+              <span
+                aria-label={`${badge} awaiting your action`}
+                className="relative ml-auto min-w-6 animate-beacon rounded-full bg-brand px-1.5 py-0.5 text-center text-[11px] font-semibold text-brand-fg tabular"
+              >
                 {badge > 99 ? "99+" : badge}
               </span>
             )}

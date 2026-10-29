@@ -32,29 +32,33 @@ const TRAININGS = [
   ["Facilities Energy Management", "Malaysian Green Building Council", "1350.00"],
 ] as const;
 
-const REQUESTERS = ["requester@demo.wct.my", "requester.malls@demo.wct.my", "hod.enc@demo.wct.my"];
+const REQUESTERS = ["requester@demo.wct.my", "requester.malls@demo.wct.my", "requester.enc@demo.wct.my"];
 const HOD_OF: Record<string, string> = {
   "requester@demo.wct.my": "hod.land@demo.wct.my",
   "requester.malls@demo.wct.my": "hod.malls@demo.wct.my",
-  "hod.enc@demo.wct.my": "hod.enc@demo.wct.my",
+  "requester.enc@demo.wct.my": "hod.enc@demo.wct.my",
 };
 const BU_ADMIN_OF: Record<string, string> = {
   "requester@demo.wct.my": "buadmin.land@demo.wct.my",
   "requester.malls@demo.wct.my": "buadmin.malls@demo.wct.my",
-  "hod.enc@demo.wct.my": "buadmin.enc@demo.wct.my",
+  "requester.enc@demo.wct.my": "buadmin.enc@demo.wct.my",
 };
-/** Every status, the BU Admin step, and rejections that restart at the HOD. */
+/**
+ * Every status, the BU Admin step, and rejections that restart at the HOD.
+ * Requesters rotate Land, Malls, E&C, so plan i goes to REQUESTERS[i % 3]:
+ * Land and Malls finish at L&D; the E&C plans (2, 5, 8) show HR Head's step.
+ */
 const PLANS: string[][] = [
-  ["SUBMIT", "HOD", "BU", "LND", "HR"],
+  ["SUBMIT", "HOD", "BU", "LND"],
   ["SUBMIT"],
-  ["SUBMIT", "HOD"],
+  ["SUBMIT", "HOD", "BU", "LND"],
   ["SUBMIT", "HOD", "BU"],
+  ["SUBMIT", "HOD", "BU", "LND"],
   ["SUBMIT", "HOD", "BU", "LND", "HR"],
   ["SUBMIT", "HOD", "BU_REJECT"],
-  ["SUBMIT", "HOD", "BU", "LND"],
   ["SUBMIT", "HOD", "BU", "LND_REJECT", "RESUBMIT"],
+  ["SUBMIT", "HOD"],
   ["SUBMIT", "CANCEL"],
-  ["SUBMIT", "HOD", "BU", "LND", "HR"],
 ];
 const RELEVANCY = [
   "The team applies this daily on live projects; current skills gaps were raised in the last performance review.",
@@ -118,7 +122,9 @@ async function retime(requestId: string, month: Date) {
 
 async function main() {
   const now = new Date();
-  const total = randInt(10, 20);
+  // DEMO_REQUEST_COUNT pins the count (10–20) so every plan/requester pairing can be exercised.
+  const pinned = Number.parseInt(process.env.DEMO_REQUEST_COUNT ?? "", 10);
+  const total = pinned >= 10 && pinned <= 20 ? pinned : randInt(10, 20);
   const monthsSoFar = Array.from({ length: now.getMonth() + 1 }, (_, m) => new Date(now.getFullYear(), m, 1));
   const months = shuffle(monthsSoFar).slice(0, Math.min(5, monthsSoFar.length)).sort((a, b) => a.getTime() - b.getTime());
   const listFile = await nameListXlsx();
@@ -168,9 +174,11 @@ async function main() {
         conductedBy: provider,
       })).version;
     }
+    let status = "DRAFT";
     const step = async (email: string, input: Record<string, unknown>) => {
       const r = await performAction(await as(email), { requestId: id, version, ...input } as never);
       version = r.version;
+      status = r.status;
     };
     for (const s of PLANS[i % PLANS.length]) {
       if (s === "SUBMIT") await step(reqEmail, { type: "SUBMIT" });
@@ -178,7 +186,8 @@ async function main() {
       if (s === "HOD") await step(HOD_OF[reqEmail], { type: "APPROVE" });
       if (s === "BU") await step(BU_ADMIN_OF[reqEmail], { type: "APPROVE" });
       if (s === "LND") await step(i % 2 ? "lnd1@demo.wct.my" : "lnd2@demo.wct.my", { type: "APPROVE", remark: "HRD Corp claimable under SBL-Khas." });
-      if (s === "HR") await step("hrhead@demo.wct.my", { type: "APPROVE" });
+      // Land and Malls are finalised by L&D, so only a request that reached HR Head gets this step.
+      if (s === "HR" && status === "PENDING_HR") await step("hrhead@demo.wct.my", { type: "APPROVE" });
       if (s === "BU_REJECT") await step(BU_ADMIN_OF[reqEmail], { type: "REJECT", remark: "Not in this year's BU training budget — please align with the BU plan and resubmit." });
       if (s === "LND_REJECT") await step("lnd1@demo.wct.my", { type: "REJECT", remark: "Provider quotation missing — please attach it." });
       if (s === "CANCEL") await step(reqEmail, { type: "CANCEL", remark: "Project deadline moved; will re-apply next quarter." });

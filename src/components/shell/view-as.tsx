@@ -81,7 +81,7 @@ export function ViewAsBanner({ name, roleLabel }: { name: string; roleLabel: str
     setBusy(false);
   }
   return (
-    <div role="status" className="sticky top-0 z-40 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 bg-brand px-4 py-2 text-sm text-brand-fg lg:top-0">
+    <div role="status" className="relative z-40 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 border-b border-info/25 bg-info-soft lg:sticky lg:top-0 px-4 py-2 text-sm text-info-text">
       <Eye className="size-4 shrink-0" aria-hidden />
       <span>
         Viewing as <b className="font-semibold">{name}</b> · {roleLabel}
@@ -90,7 +90,7 @@ export function ViewAsBanner({ name, roleLabel }: { name: string; roleLabel: str
         type="button"
         onClick={exit}
         disabled={busy}
-        className="inline-flex cursor-pointer items-center gap-1.5 rounded-md bg-brand-fg/10 px-2.5 py-1 font-medium hover:bg-brand-fg/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-fg"
+        className="inline-flex cursor-pointer items-center gap-1.5 rounded-md bg-surface px-2.5 py-1 font-medium text-ink shadow-sm ring-1 ring-info/30 hover:ring-info/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
       >
         {busy ? <Loader2 className="size-3.5 animate-spin" /> : <LogOut className="size-3.5" />} Exit
       </button>
@@ -101,7 +101,7 @@ export function ViewAsBanner({ name, roleLabel }: { name: string; roleLabel: str
 /** Shown to everyone signed in with a demo account from the sign-in page. */
 export function DemoBanner({ name, roleLabel }: { name: string; roleLabel: string }) {
   return (
-    <div role="status" className="sticky top-0 z-40 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 bg-brand px-4 py-2 text-sm text-brand-fg">
+    <div role="status" className="relative z-40 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 border-b border-info/25 bg-info-soft lg:sticky lg:top-0 px-4 py-2 text-sm text-info-text">
       <Eye className="size-4 shrink-0" aria-hidden />
       <span>
         Demo account: <b className="font-semibold">{name}</b> · {roleLabel}. You&apos;re seeing demo requests only.
@@ -109,7 +109,7 @@ export function DemoBanner({ name, roleLabel }: { name: string; roleLabel: strin
       <form action={`${BASE_PATH}/api/auth/logout`} method="post">
         <button
           type="submit"
-          className="inline-flex cursor-pointer items-center gap-1.5 rounded-md bg-brand-fg/10 px-2.5 py-1 font-medium hover:bg-brand-fg/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-fg"
+          className="inline-flex cursor-pointer items-center gap-1.5 rounded-md bg-surface px-2.5 py-1 font-medium text-ink shadow-sm ring-1 ring-info/30 hover:ring-info/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
         >
           <LogOut className="size-3.5" /> Switch account
         </button>

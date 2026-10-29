@@ -9,11 +9,12 @@ export async function signInAs(browser: Browser, email: string): Promise<Page> {
   return page;
 }
 
-export async function decide(page: Page, url: string, kind: "approve") {
+/** "approve" passes the request on; "final" is the last approval on its route. */
+export async function decide(page: Page, url: string, kind: "approve" | "final") {
   await page.goto(url);
   await page.getByRole("button", { name: "Approve" }).first().click();
   await page.getByRole("dialog").getByRole("button", { name: "Approve" }).click();
-  await expect(page.getByText("Approved and passed to the next stage")).toBeVisible();
+  await expect(page.getByText(kind === "final" ? "Final approval given. The request is approved." : "Approved and passed to the next stage")).toBeVisible();
   return kind;
 }
 

@@ -79,8 +79,9 @@ export function resolveRecipients(event: WorkflowEvent, p: Parties): { to: Perso
       .map((x) => x.email.toLowerCase()),
   );
   const toFinal = dedupe(to, actorEmails);
-  // The requester is still copied on their own submission; a rejecting approver is never copied on their own rejection.
-  const ccExclude = event.kind === "REJECTED" ? [...actorEmails] : [];
+  // The requester is still copied on their own submission; an approver is never copied on their own
+  // rejection or final approval (L&D gives the final approval for Land and Malls).
+  const ccExclude = event.kind === "REJECTED" || event.kind === "FINAL_APPROVED" ? [...actorEmails] : [];
   const ccFinal = dedupe(cc, new Set([...ccExclude, ...toFinal.map((x) => x.email.toLowerCase())]));
   return { to: toFinal, cc: ccFinal };
 }

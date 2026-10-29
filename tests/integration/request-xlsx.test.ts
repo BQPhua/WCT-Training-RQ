@@ -27,11 +27,11 @@ async function workbook(email: string, id: string) {
 }
 
 describe("per-request Excel export", () => {
-  it("has Request, Candidates and Approval trail sheets after a full approval", async () => {
-    const req = await asUser("requester@demo.wct.my");
+  it("has Request, Candidates and Approval trail sheets after a full approval (E&C, four approvals)", async () => {
+    const req = await asUser("requester.enc@demo.wct.my");
     const { id } = await createDraft(req, validDraft);
     await performAction(req, { requestId: id, version: await versionOf(id), type: "SUBMIT" });
-    for (const email of ["hod.land@demo.wct.my", "buadmin.land@demo.wct.my", "lnd1@demo.wct.my", "hrhead@demo.wct.my"]) {
+    for (const email of ["hod.enc@demo.wct.my", "buadmin.enc@demo.wct.my", "lnd1@demo.wct.my", "hrhead@demo.wct.my"]) {
       await performAction(await asUser(email), { requestId: id, version: await versionOf(id), type: "APPROVE" });
     }
     const wb = await workbook("hrhead@demo.wct.my", id);

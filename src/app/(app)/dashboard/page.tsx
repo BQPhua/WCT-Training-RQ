@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Stagger, StaggerItem } from "@/components/motion/stagger";
 import { ArrowRight, Inbox, Plus } from "lucide-react";
 import {
   AnalyticsCharts,
@@ -134,9 +135,9 @@ export default async function DashboardPage({
           You don&apos;t have access to that page.
         </p>
       )}
-      <div className="flex flex-wrap items-end justify-between gap-4 animate-rise">
+      <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight sm:text-[28px]">
+          <h1 className="text-2xl font-semibold tracking-[-0.02em] sm:text-[28px] sm:leading-9">
             {greeting()}, {user.name.split(" ")[0]}
           </h1>
           <p className="mt-1 text-sm text-muted">{today}</p>
@@ -186,9 +187,11 @@ export default async function DashboardPage({
                   {p.label}
                 </span>
                 <span
-                  className={`mt-1 flex items-baseline gap-2 whitespace-nowrap text-xl font-semibold tabular tracking-tight sm:text-2xl ${p.strong ? "text-brand-text" : "text-ink"}`}
+                  className={`mt-1 flex items-center gap-2 whitespace-nowrap text-xl font-semibold tabular tracking-tight sm:text-2xl ${p.strong ? "text-brand-text" : "text-ink"}`}
                 >
                   {p.value}
+                  {/* The dusk beacon: something is waiting for you. */}
+                  {p.strong && <span aria-hidden className="size-2 animate-beacon rounded-full bg-brand" />}
                   {p.href && (
                     <ArrowRight className="size-4 -translate-x-1 text-muted opacity-0 transition-all group-hover:translate-x-0 group-hover:opacity-100" />
                   )}
@@ -231,9 +234,9 @@ export default async function DashboardPage({
                       </span>
                       <Link
                         href={`/requests/${a.requestId}`}
-                        className="min-w-0 truncate font-medium text-brand-text hover:underline"
+                        className="min-w-0 truncate font-medium text-ink underline-offset-4 hover:text-info-text hover:underline"
                       >
-                        {a.refNo} · {a.title}
+                        <span className="tabular text-muted">{a.refNo}</span> · {a.title}
                       </Link>
                     </p>
                     <p className="mt-0.5 text-xs tabular text-muted">
@@ -265,15 +268,16 @@ export default async function DashboardPage({
               }
             />
             {d.awaitingList.length ? (
-              <ul className="divide-y divide-line">
+              <Stagger as="ul" className="divide-y divide-line">
                 {d.awaitingList.map((r) => (
-                  <li key={r.id}>
+                  <StaggerItem key={r.id}>
                     <Link
                       href={`/requests/${r.id}`}
                       className="block px-5 py-3.5 transition-colors hover:bg-surface-2"
                     >
                       <span className="flex items-center justify-between gap-3">
-                        <span className="text-xs font-semibold tabular text-muted">
+                        <span className="flex items-center gap-2 text-xs font-semibold tabular text-muted">
+                          <span aria-hidden className="size-1.5 rounded-full bg-brand" />
                           {r.refNo}
                         </span>
                         <StatusBadge status={r.status} />
@@ -286,9 +290,9 @@ export default async function DashboardPage({
                         {formatDateMY(r.startDate)}
                       </span>
                     </Link>
-                  </li>
+                  </StaggerItem>
                 ))}
-              </ul>
+              </Stagger>
             ) : (
               <EmptyState icon={<Inbox />} title="You're all caught up">
                 Nothing is waiting for you right now.
@@ -306,7 +310,7 @@ export default async function DashboardPage({
                       className="flex gap-3.5 px-5 py-3 transition-colors hover:bg-surface-2"
                     >
                       <span className="grid w-11 shrink-0 place-items-center rounded-md border border-line bg-surface-2 py-1 text-center leading-none">
-                        <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-brand-text">
+                        <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-info-text">
                           {u.startDate ? monthShort(u.startDate) : "—"}
                         </span>
                         <span className="mt-0.5 text-lg font-semibold tabular text-ink">

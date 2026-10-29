@@ -16,7 +16,7 @@ export function initials(name: string) {
 
 export function Avatar({ name, className }: { name: string; className?: string }) {
   return (
-    <span aria-hidden className={cn("inline-grid size-8 shrink-0 place-items-center rounded-full bg-brand-soft text-[12px] font-semibold text-brand-text ring-1 ring-brand/30", className)}>
+    <span aria-hidden className={cn("inline-grid size-8 shrink-0 place-items-center rounded-full bg-info-soft text-[12px] font-semibold text-info-text ring-1 ring-info/30", className)}>
       {initials(name)}
     </span>
   );
@@ -25,7 +25,7 @@ export function Avatar({ name, className }: { name: string; className?: string }
 export function EmptyState({ icon, title, children, action }: { icon?: React.ReactNode; title: string; children?: React.ReactNode; action?: React.ReactNode }) {
   return (
     <div className="flex flex-col items-center px-6 py-12 text-center">
-      {icon && <div className="mb-3 grid size-11 place-items-center rounded-full bg-ground text-muted [&_svg]:size-5">{icon}</div>}
+      {icon && <div className="mb-4 grid size-12 place-items-center rounded-full bg-info-soft text-info-text ring-8 ring-info-soft/40 [&_svg]:size-5">{icon}</div>}
       <p className="font-medium text-ink">{title}</p>
       {children && <p className="mt-1 max-w-sm text-sm text-muted">{children}</p>}
       {action && <div className="mt-4">{action}</div>}
@@ -35,10 +35,10 @@ export function EmptyState({ icon, title, children, action }: { icon?: React.Rea
 
 export function PageHeader({ title, description, actions }: { title: string; description?: React.ReactNode; actions?: React.ReactNode }) {
   return (
-    <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+    <div className="mb-7 flex flex-wrap items-end justify-between gap-4">
       <div className="min-w-0">
-        <h1 className="text-2xl font-semibold tracking-tight text-ink sm:text-[28px]">{title}</h1>
-        {description && <p className="mt-1 text-sm text-muted">{description}</p>}
+        <h1 className="text-2xl font-semibold tracking-[-0.02em] text-ink sm:text-[28px] sm:leading-9">{title}</h1>
+        {description && <p className="mt-1.5 max-w-[70ch] text-sm text-muted">{description}</p>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
     </div>

@@ -8,7 +8,7 @@ export const metadata = { title: "Admin · Roles" };
 
 const ROLES: { role: RoleName; title: string; description: string }[] = [
   { role: "LND", title: "L&D Team (System Admin)", description: "Any member reviews requests after the BU Admin, records HRD Corp details and manages these settings (full access)." },
-  { role: "HR_HEAD", title: "HR Head", description: "Gives final approval. With more than one, any of them can act." },
+  { role: "HR_HEAD", title: "HR Head", description: "Gives final approval for E&C requests (Land and Malls requests are finalised by the L&D Team). With more than one, any of them can act." },
   { role: "SYS_ADMIN", title: "System Admins", description: "IT support access to these settings. Can't approve unless they also hold an approver role." },
 ];
 

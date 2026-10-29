@@ -16,11 +16,14 @@ export default async function OrganisationPage() {
         <ul className="divide-y divide-line">
           {o.bus.map((b) => (
             <li key={b.id} className="grid gap-3 px-5 py-4 md:grid-cols-[14rem_1fr] md:items-start">
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <span className="rounded bg-shell px-1.5 py-0.5 text-[11px] font-semibold text-shell-fg">{b.code}</span>
                 <span className="font-medium">{b.name}</span>
                 {!b.isActive && <span className="text-xs text-muted">(inactive)</span>}
                 <BuDialog bu={b} />
+                <span className="basis-full text-xs text-muted">
+                  Final approval: <span className="font-medium text-ink-2">{b.requiresHrApproval ? "HR Head" : "L&D Team"}</span>
+                </span>
               </div>
               <BuAdminsEditor buId={b.id} users={users} current={o.buAdmins.filter((a) => a.businessUnitId === b.id).map((a) => ({ id: a.userId, name: a.name, email: "" }))} />
             </li>

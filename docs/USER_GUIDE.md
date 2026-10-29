@@ -18,7 +18,7 @@ Open **https://hrforms.wct.my/WCT-Training-RQ/** and sign in with your WCT Micro
 
 You can **Save draft** at any time. Your request then shows a reference number (e.g. `TRQ-2026-0007`), and you can follow it on the progress tracker.
 
-**Approval route:** Department HOD → your BU Admin (Land, E&C or Malls) → L&D Team → HR Head.
+**Approval route:** Department HOD → your BU Admin (Land, E&C or Malls) → L&D Team. For **Land and Malls** the L&D Team gives the final approval. For **E&C** the request then goes to the **HR Head** for final approval. The "Approval route" panel on the form shows the exact route for your business unit.
 
 **If it's returned to you,** you'll get an email. Open the request, read the remark, click **Amend & resubmit**, make your changes and resubmit. It starts again at your HOD, and earlier versions are kept under **Versions**.
 

@@ -1,11 +1,10 @@
 "use client";
 import * as React from "react";
 import Link from "next/link";
-import { Dialog } from "radix-ui";
 import { Eye, LogOut, Menu as MenuIcon, Monitor, Moon, Plus, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
-import { SheetContent } from "@/components/ui/dialog";
+import { Dialog, DialogTrigger, SheetContent } from "@/components/ui/dialog";
 import { Menu, MenuContent, MenuItem, MenuLabel, MenuSeparator, MenuTrigger } from "@/components/ui/menu";
 import { Avatar } from "@/components/ui/misc";
 import { BASE_PATH } from "@/lib/env";
@@ -38,7 +37,7 @@ function UserMenu({ user }: { user: ShellUser }) {
     <form ref={signOutForm} action={`${BASE_PATH}/api/auth/logout`} method="post" hidden />
     {user.demoAccounts && <ViewAsDialog open={viewAsOpen} onOpenChange={setViewAsOpen} accounts={user.demoAccounts} />}
     <Menu>
-      <MenuTrigger className="flex w-full cursor-pointer items-center gap-3 rounded-lg p-2 text-left hover:bg-shell-2/60 outline-none focus-visible:ring-2 focus-visible:ring-brand">
+      <MenuTrigger className="flex w-full cursor-pointer items-center gap-3 rounded-lg p-2 text-left outline-none transition-colors hover:bg-white/[0.06] focus-visible:ring-2 focus-visible:ring-shell-fg">
         <Avatar name={user.name} />
         <span className="min-w-0 flex-1">
           <span className="block truncate text-sm font-medium text-shell-fg">{user.name}</span>
@@ -49,7 +48,7 @@ function UserMenu({ user }: { user: ShellUser }) {
         <MenuLabel>
           <span className="block font-medium text-ink">{user.name}</span>
           <span className="block truncate">{user.email}</span>
-          {user.roles.length > 0 && <span className="mt-1 block text-brand-text">{user.roles.join(" · ")}</span>}
+          {user.roles.length > 0 && <span className="mt-1 block text-info-text">{user.roles.join(" · ")}</span>}
         </MenuLabel>
         <MenuSeparator />
         <MenuLabel>Theme</MenuLabel>
@@ -62,7 +61,7 @@ function UserMenu({ user }: { user: ShellUser }) {
           return (
             <MenuItem key={value as string} onSelect={() => setTheme(value as string)}>
               <I /> {label as string}
-              {theme === value && <span className="ml-auto text-xs text-brand-text">Active</span>}
+              {theme === value && <span className="ml-auto text-xs text-info-text">Active</span>}
             </MenuItem>
           );
         })}
@@ -81,18 +80,18 @@ function UserMenu({ user }: { user: ShellUser }) {
   );
 }
 
-function SidebarBody({ user, nav, onNavigate }: { user: ShellUser; nav: NavProps; onNavigate?: () => void }) {
+function SidebarBody({ user, nav, onNavigate, instance }: { user: ShellUser; nav: NavProps; onNavigate?: () => void; instance: string }) {
   return (
-    <div data-shell className="flex h-full flex-col">
-      <div className="px-4 pb-4 pt-5">
-        <Link href="/dashboard" onClick={onNavigate} className="inline-block rounded-md outline-none focus-visible:ring-2 focus-visible:ring-brand">
+    <div data-shell className="flex h-full flex-col bg-gradient-to-b from-shell via-shell to-shell-dusk">
+      <div className="px-4 pb-6 pt-5">
+        <Link href="/dashboard" onClick={onNavigate} className="inline-block rounded-md outline-none focus-visible:ring-2 focus-visible:ring-shell-fg">
           <Wordmark />
         </Link>
       </div>
       <div className="flex-1 overflow-y-auto px-3">
-        <Nav {...nav} onNavigate={onNavigate} />
+        <Nav {...nav} onNavigate={onNavigate} instance={instance} />
       </div>
-      <div className="border-t border-shell-line p-3">
+      <div className="border-t border-white/10 p-3">
         <UserMenu user={user} />
       </div>
     </div>
@@ -105,21 +104,21 @@ export function AppShell({ user, nav, children }: { user: ShellUser; nav: NavPro
     <div className="min-h-dvh lg:pl-64">
       {user.viewedAs && <ViewAsBanner name={user.viewedAs.name} roleLabel={user.viewedAs.roleLabel} />}
       {!user.viewedAs && user.demoSession && <DemoBanner name={user.name} roleLabel={user.demoSession.roleLabel} />}
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 bg-shell lg:block">
-        <SidebarBody user={user} nav={nav} />
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 bg-shell shadow-[inset_-1px_0_0_oklch(1_0_0/0.06)] lg:block">
+        <SidebarBody user={user} nav={nav} instance="rail" />
       </aside>
 
-      <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-shell-line bg-shell px-4 lg:hidden">
-        <Dialog.Root open={open} onOpenChange={setOpen}>
-          <Dialog.Trigger asChild>
-            <button className="grid size-10 cursor-pointer place-items-center rounded-md text-shell-fg hover:bg-shell-2" aria-label="Open navigation">
+      <header className="sticky top-0 z-20 flex h-14 items-center gap-3 bg-gradient-to-r from-shell to-shell-dusk px-4 shadow-md lg:hidden">
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogTrigger asChild>
+            <button className="grid size-10 cursor-pointer place-items-center rounded-md text-shell-fg transition-colors hover:bg-white/10" aria-label="Open navigation">
               <MenuIcon className="size-5" />
             </button>
-          </Dialog.Trigger>
+          </DialogTrigger>
           <SheetContent title="Navigation">
-            <SidebarBody user={user} nav={nav} onNavigate={() => setOpen(false)} />
+            <SidebarBody user={user} nav={nav} onNavigate={() => setOpen(false)} instance="drawer" />
           </SheetContent>
-        </Dialog.Root>
+        </Dialog>
         <Link href="/dashboard" className="flex-1">
           <Wordmark />
         </Link>
@@ -130,7 +129,7 @@ export function AppShell({ user, nav, children }: { user: ShellUser; nav: NavPro
         </Button>
       </header>
 
-      <main id="main" className="mx-auto w-full max-w-[1280px] px-4 py-6 sm:px-6 lg:px-10 lg:py-9">{children}</main>
+      <main id="main" className="mx-auto w-full max-w-[1320px] px-4 py-6 sm:px-6 lg:px-10 lg:py-10">{children}</main>
     </div>
   );
 }

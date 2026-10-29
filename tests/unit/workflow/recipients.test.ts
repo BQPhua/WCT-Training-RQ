@@ -39,6 +39,12 @@ describe("resolveRecipients", () => {
     expect(emails(r.cc)).toEqual(emails([P.hod, P.lnd1, P.lnd2, P.bua]));
   });
 
+  it("FINAL_APPROVED by L&D (Land/Malls) → the approving L&D member is not copied on their own approval", () => {
+    const r = resolveRecipients(ev({ kind: "FINAL_APPROVED", fromStatus: "PENDING_LND", actorId: P.lnd1.id }), parties);
+    expect(emails(r.to)).toEqual([P.requester.email]);
+    expect(emails(r.cc)).toEqual(emails([P.hod, P.lnd2, P.bua]));
+  });
+
   it("REJECTED by HR → requester, cc everyone who approved this round", () => {
     const r = resolveRecipients(
       ev({ kind: "REJECTED", fromStatus: "PENDING_HR", byStage: "HR", sentBackTo: "REQUESTER", actorId: P.hr.id }),

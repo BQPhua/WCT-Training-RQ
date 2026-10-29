@@ -237,7 +237,7 @@ export function TrainingRqDocument({ d }: { d: PdfData }) {
                 </Text>
               </View>
               <View style={[s.digital, { minHeight: 14 }]}>
-                <Text>{hr ? `${hr.name} (digitally approved)` : ""}</Text>
+                <Text>{hr ? `${hr.name} (digitally approved)` : d.hrNotRequiredFor ? `Not required for ${d.hrNotRequiredFor}` : ""}</Text>
               </View>
               <Text style={s.label}>NAME & SIGNATURE</Text>
               <Text style={[s.label, { marginTop: 4 }]}>DATE: {hr ? formatDateMY(hr.at) : ""}</Text>

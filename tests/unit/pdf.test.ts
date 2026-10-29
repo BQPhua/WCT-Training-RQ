@@ -32,6 +32,7 @@ const base: PdfData = {
   hrdcClaimable: true,
   hrdcGrantNo: "HRDC-55",
   lndRemarks: null,
+  hrNotRequiredFor: null,
 };
 
 async function text(buf: Buffer) {
@@ -75,5 +76,19 @@ describe("renderRequestPdf", () => {
   it("renders older requests without relevancy or participant count", async () => {
     const t = await text(await renderRequestPdf({ ...base, relevancy: null, participantCount: null }));
     expect(t).toContain("2,900.00"); // falls back to 2 typed names
+  }, 30000);
+
+  it('HR block reads "Not required for Malls" when no HR approval and the unit skips HR', async () => {
+    const t = await text(
+      await renderRequestPdf({ ...base, businessUnitName: "Malls", hrNotRequiredFor: "Malls", approvals: base.approvals.slice(0, 3) }),
+    );
+    expect(t).toContain("Not required for Malls");
+    expect(t).not.toContain("Farah Hanim");
+  }, 30000);
+
+  it("an HR-approved request shows the HR Head, not the skip note", async () => {
+    const t = await text(await renderRequestPdf(base));
+    expect(t).toContain("Farah Hanim (digitally approved)");
+    expect(t).not.toContain("Not required for");
   }, 30000);
 });

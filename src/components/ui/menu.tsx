@@ -1,15 +1,49 @@
 "use client";
 import * as React from "react";
 import { DropdownMenu as M, Tooltip as T } from "radix-ui";
+import { AnimatePresence, motion } from "motion/react";
 import { cn } from "@/lib/utils";
 
-export const Menu = M.Root;
-export const MenuTrigger = M.Trigger;
-export function MenuContent({ className, ...props }: React.ComponentProps<typeof M.Content>) {
+const OpenContext = React.createContext(false);
+
+/** Radix DropdownMenu root that tracks its open state so the content can animate out. */
+export function Menu({ open: openProp, defaultOpen, onOpenChange, ...props }: React.ComponentProps<typeof M.Root>) {
+  const [uncontrolled, setUncontrolled] = React.useState(defaultOpen ?? false);
+  const open = openProp ?? uncontrolled;
+  const change = React.useCallback(
+    (next: boolean) => {
+      if (openProp === undefined) setUncontrolled(next);
+      onOpenChange?.(next);
+    },
+    [openProp, onOpenChange],
+  );
   return (
-    <M.Portal>
-      <M.Content sideOffset={6} className={cn("z-50 min-w-48 rounded-lg border border-line bg-surface p-1 shadow-md data-[state=open]:animate-rise", className)} {...props} />
-    </M.Portal>
+    <OpenContext.Provider value={open}>
+      <M.Root open={open} onOpenChange={change} {...props} />
+    </OpenContext.Provider>
+  );
+}
+export const MenuTrigger = M.Trigger;
+export function MenuContent({ className, children, ...props }: React.ComponentProps<typeof M.Content>) {
+  const open = React.useContext(OpenContext);
+  return (
+    <AnimatePresence>
+      {open && (
+        <M.Portal forceMount>
+          <M.Content forceMount asChild sideOffset={6} {...props}>
+            <motion.div
+              className={cn("z-50 min-w-48 origin-[var(--radix-dropdown-menu-content-transform-origin)] rounded-lg border border-line bg-surface p-1 shadow-md outline-none", className)}
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.96 }}
+              transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
+            >
+              {children}
+            </motion.div>
+          </M.Content>
+        </M.Portal>
+      )}
+    </AnimatePresence>
   );
 }
 export function MenuItem({ className, ...props }: React.ComponentProps<typeof M.Item>) {

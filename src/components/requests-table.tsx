@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Stagger, StaggerItem } from "@/components/motion/stagger";
 import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, SearchX } from "lucide-react";
 import { StatusBadge } from "@/components/status";
 import { EmptyState } from "@/components/ui/misc";
@@ -37,9 +38,9 @@ export function RequestsTable({ rows, total, f, base, sp, emptyTitle, emptyText 
   if (!rows.length) return <EmptyState icon={<SearchX />} title={emptyTitle}>{emptyText}</EmptyState>;
   return (
     <div>
-      <ul className="divide-y divide-line sm:hidden">
+      <Stagger as="ul" className="divide-y divide-line sm:hidden">
         {rows.map((r) => (
-          <li key={r.id}>
+          <StaggerItem key={r.id}>
             <Link href={`/requests/${r.id}`} className="block px-4 py-3.5 active:bg-surface-2">
               <span className="flex items-center justify-between gap-3">
                 <span className="text-xs font-semibold tabular text-muted">{r.refNo ?? "Draft"}</span>
@@ -50,9 +51,9 @@ export function RequestsTable({ rows, total, f, base, sp, emptyTitle, emptyText 
                 {r.requesterName} · {formatDateRange(r.startDate, r.endDate)} · {formatMYR(r.totalFees)}
               </span>
             </Link>
-          </li>
+          </StaggerItem>
         ))}
-      </ul>
+      </Stagger>
       <div className="hidden overflow-x-auto sm:block">
         <table className="w-full min-w-[820px] table-fixed text-sm">
           <thead className="border-b border-line bg-surface-2 text-xs text-muted">
@@ -66,9 +67,9 @@ export function RequestsTable({ rows, total, f, base, sp, emptyTitle, emptyText 
               <SortHead label="Updated" col="updatedAt" f={f} base={base} sp={sp} className="hidden w-40 text-right 2xl:table-cell" />
             </tr>
           </thead>
-          <tbody className="divide-y divide-line">
+          <Stagger as="tbody" className="divide-y divide-line">
             {rows.map((r) => (
-              <tr key={r.id} className="group relative hover:bg-surface-2">
+              <StaggerItem as="tr" key={r.id} className="group relative transition-colors hover:bg-surface-2">
                 <td className="whitespace-nowrap px-4 py-3 font-semibold tabular text-ink-2">
                   <Link href={`/requests/${r.id}`} className="after:absolute after:inset-0 focus-visible:outline-none focus-visible:after:outline focus-visible:after:outline-2 focus-visible:after:outline-focus">
                     {r.refNo ?? "Draft"}
@@ -90,9 +91,9 @@ export function RequestsTable({ rows, total, f, base, sp, emptyTitle, emptyText 
                   <StatusBadge status={r.status} />
                 </td>
                 <td className="hidden whitespace-nowrap px-4 py-3 text-right text-xs tabular text-muted 2xl:table-cell">{formatDateTimeMY(r.updatedAt)}</td>
-              </tr>
+              </StaggerItem>
             ))}
-          </tbody>
+          </Stagger>
         </table>
       </div>
       <nav aria-label="Pagination" className="flex items-center justify-between gap-3 border-t border-line px-4 py-3 text-sm text-muted">
@@ -103,7 +104,7 @@ export function RequestsTable({ rows, total, f, base, sp, emptyTitle, emptyText 
           <Link
             aria-disabled={f.page <= 1}
             href={href(base, sp, { page: String(f.page - 1) })}
-            className={cn("grid size-8 place-items-center rounded-md border border-line hover:bg-surface-2", f.page <= 1 && "pointer-events-none opacity-40")}
+            className={cn("grid size-10 place-items-center rounded-md border border-line transition-colors hover:bg-surface-2 sm:size-8", f.page <= 1 && "pointer-events-none opacity-40")}
             aria-label="Previous page"
           >
             <ChevronLeft className="size-4" />
@@ -114,7 +115,7 @@ export function RequestsTable({ rows, total, f, base, sp, emptyTitle, emptyText 
           <Link
             aria-disabled={f.page >= pages}
             href={href(base, sp, { page: String(f.page + 1) })}
-            className={cn("grid size-8 place-items-center rounded-md border border-line hover:bg-surface-2", f.page >= pages && "pointer-events-none opacity-40")}
+            className={cn("grid size-10 place-items-center rounded-md border border-line transition-colors hover:bg-surface-2 sm:size-8", f.page >= pages && "pointer-events-none opacity-40")}
             aria-label="Next page"
           >
             <ChevronRight className="size-4" />

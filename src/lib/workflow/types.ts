@@ -29,6 +29,11 @@ export interface RequestRef {
   requesterId: string;
   departmentId: string | null;
   businessUnitId: string | null;
+  /**
+   * Does the request's business unit need HR Head's final approval?
+   * Only consulted when L&D approves. Missing means true (E&C, or no unit).
+   */
+  requiresHrApproval?: boolean;
 }
 
 /** Number of active holders of each pooled role (for the self-approval rule). */

@@ -23,7 +23,7 @@ export function toneOf(status: Status): Tone {
 
 const BADGE: Record<Tone, string> = {
   approved: "bg-approved-soft text-approved-text ring-approved/30",
-  pending: "bg-pending-soft text-pending-text ring-pending/50",
+  pending: "bg-pending-soft text-pending-text ring-pending/35",
   returned: "bg-returned-soft text-returned-text ring-returned/30",
   cancelled: "bg-cancelled-soft text-cancelled-text ring-cancelled/40",
   draft: "bg-draft text-draft-text ring-line-strong",
@@ -40,7 +40,7 @@ export const DOT: Record<Tone, string> = {
 export function StatusBadge({ status, className }: { status: Status; className?: string }) {
   const tone = toneOf(status);
   return (
-    <span className={cn("inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset", BADGE[tone], className)}>
+    <span className={cn("inline-flex h-6 items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 text-xs font-medium ring-1 ring-inset", BADGE[tone], className)}>
       <span className={cn("size-1.5 rounded-full", DOT[tone])} aria-hidden />
       {STATUS_LABEL[status]}
     </span>

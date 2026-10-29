@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
-import { businessUnitAdmins, departments, requestActions, requestRevisions, trainingRequests, users } from "@/db/schema";
+import { businessUnitAdmins, businessUnits, departments, requestActions, requestRevisions, trainingRequests, users } from "@/db/schema";
 import { seed } from "@/db/seed";
 import {
   NoBuAdminError,
@@ -45,18 +45,84 @@ async function act(email: string, id: string, input: Record<string, unknown>) {
   return performAction(user, { requestId: id, version: await versionOf(id), ...input } as never);
 }
 
-async function submitted() {
-  const req = await asUser("requester@demo.wct.my");
+async function submitted(email = "requester@demo.wct.my") {
+  const req = await asUser(email);
   const { id } = await createDraft(req, validDraft);
-  await act("requester@demo.wct.my", id, { type: "SUBMIT" });
+  await act(email, id, { type: "SUBMIT" });
   return id;
 }
 
+async function statusOf(id: string) {
+  const [r] = await db.select({ s: trainingRequests.status, f: trainingRequests.finalisedAt }).from(trainingRequests).where(eq(trainingRequests.id, id));
+  return r;
+}
+
+async function setHrFlag(code: string, value: boolean) {
+  await db.update(businessUnits).set({ requiresHrApproval: value }).where(eq(businessUnits.code, code));
+}
+
+describe("route per business unit", () => {
+  it("Malls request is approved by L&D without HR Head", async () => {
+    const id = await submitted("requester.malls@demo.wct.my");
+    await act("hod.malls@demo.wct.my", id, { type: "APPROVE" });
+    await act("buadmin.malls@demo.wct.my", id, { type: "APPROVE" });
+    notifier.mockClear();
+    const res = await act("lnd1@demo.wct.my", id, { type: "APPROVE", remark: "Final" });
+    expect(res.status).toBe("APPROVED");
+    expect((await statusOf(id)).f).not.toBeNull();
+    const [last] = (await db.select().from(requestActions).where(eq(requestActions.requestId, id))).slice(-1);
+    expect(last.fromStatus).toBe("PENDING_LND");
+    expect(last.toStatus).toBe("APPROVED");
+    expect(notifier).toHaveBeenCalledTimes(1);
+  });
+
+  it("Land request is approved by L&D without HR Head", async () => {
+    const id = await submitted("requester@demo.wct.my");
+    await act("hod.land@demo.wct.my", id, { type: "APPROVE" });
+    await act("buadmin.land@demo.wct.my", id, { type: "APPROVE" });
+    expect((await act("lnd1@demo.wct.my", id, { type: "APPROVE" })).status).toBe("APPROVED");
+  });
+
+  it("E&C request still goes to HR Head", async () => {
+    const id = await submitted("requester.enc@demo.wct.my");
+    await act("hod.enc@demo.wct.my", id, { type: "APPROVE" });
+    await act("buadmin.enc@demo.wct.my", id, { type: "APPROVE" });
+    expect((await act("lnd1@demo.wct.my", id, { type: "APPROVE" })).status).toBe("PENDING_HR");
+    expect((await act("hrhead@demo.wct.my", id, { type: "APPROVE" })).status).toBe("APPROVED");
+  });
+
+  it("Request with no business unit goes to HR Head", async () => {
+    const id = await submitted("requester.malls@demo.wct.my");
+    await act("hod.malls@demo.wct.my", id, { type: "APPROVE" });
+    await act("buadmin.malls@demo.wct.my", id, { type: "APPROVE" });
+    await db.update(trainingRequests).set({ businessUnitId: null }).where(eq(trainingRequests.id, id));
+    expect((await act("lnd1@demo.wct.my", id, { type: "APPROVE" })).status).toBe("PENDING_HR");
+  });
+
+  it("Flag read at L&D approval time", async () => {
+    const id = await submitted("requester.malls@demo.wct.my");
+    await act("hod.malls@demo.wct.my", id, { type: "APPROVE" });
+    await act("buadmin.malls@demo.wct.my", id, { type: "APPROVE" });
+    await setHrFlag("MALLS", true);
+    expect((await act("lnd1@demo.wct.my", id, { type: "APPROVE" })).status).toBe("PENDING_HR");
+  });
+
+  it("In-flight PENDING_HR Malls request can be approved by HR Head", async () => {
+    await setHrFlag("MALLS", true);
+    const id = await submitted("requester.malls@demo.wct.my");
+    await act("hod.malls@demo.wct.my", id, { type: "APPROVE" });
+    await act("buadmin.malls@demo.wct.my", id, { type: "APPROVE" });
+    expect((await act("lnd1@demo.wct.my", id, { type: "APPROVE" })).status).toBe("PENDING_HR");
+    await setHrFlag("MALLS", false);
+    expect((await act("hrhead@demo.wct.my", id, { type: "APPROVE" })).status).toBe("APPROVED");
+  });
+});
+
 describe("happy path", () => {
-  it("goes DRAFT → HOD → BU Admin → L&D → HR → APPROVED with ref no and audit trail", async () => {
-    const id = await submitted();
-    expect((await act("hod.land@demo.wct.my", id, { type: "APPROVE" })).status).toBe("PENDING_BU");
-    expect((await act("buadmin.land@demo.wct.my", id, { type: "APPROVE" })).status).toBe("PENDING_LND");
+  it("goes DRAFT → HOD → BU Admin → L&D → HR → APPROVED with ref no and audit trail (E&C)", async () => {
+    const id = await submitted("requester.enc@demo.wct.my");
+    expect((await act("hod.enc@demo.wct.my", id, { type: "APPROVE" })).status).toBe("PENDING_BU");
+    expect((await act("buadmin.enc@demo.wct.my", id, { type: "APPROVE" })).status).toBe("PENDING_LND");
     await act("lnd1@demo.wct.my", id, { type: "APPROVE", remark: "HRDC claimable" });
     const res = await act("hrhead@demo.wct.my", id, { type: "APPROVE" });
 
@@ -125,14 +191,14 @@ describe("BU Admin step and rejection", () => {
   });
 
   it("HR rejection after a full round copies HOD, BU Admin and the L&D approver", async () => {
-    const id = await submitted();
-    await act("hod.land@demo.wct.my", id, { type: "APPROVE" });
-    await act("buadmin.land@demo.wct.my", id, { type: "APPROVE" });
+    const id = await submitted("requester.enc@demo.wct.my");
+    await act("hod.enc@demo.wct.my", id, { type: "APPROVE" });
+    await act("buadmin.enc@demo.wct.my", id, { type: "APPROVE" });
     await act("lnd1@demo.wct.my", id, { type: "APPROVE" });
     notifier.mockClear();
     const r = await act("hrhead@demo.wct.my", id, { type: "REJECT", remark: "Check vendor quote", sendBackTo: "LND" });
     expect(r.status).toBe("RETURNED");
-    expect(ccOf(0).cc.map((p) => p.email).sort()).toEqual(["buadmin.land@demo.wct.my", "hod.land@demo.wct.my", "lnd1@demo.wct.my"]);
+    expect(ccOf(0).cc.map((p) => p.email).sort()).toEqual(["buadmin.enc@demo.wct.my", "hod.enc@demo.wct.my", "lnd1@demo.wct.my"]);
     const [a] = await db.select().from(requestActions).where(eq(requestActions.action, "REJECT"));
     expect(a.sentBackTo).toBe("REQUESTER");
   });

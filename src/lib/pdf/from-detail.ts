@@ -3,6 +3,21 @@ import type { PdfData } from "./types";
 
 const STAGE: Record<string, string> = { PENDING_HOD: "Department HOD", PENDING_BU: "BU Admin", PENDING_LND: "L&D Team", PENDING_HR: "HR Head" };
 
+/**
+ * The unit name when HR Head's sign-off doesn't apply to this request, else null.
+ * An approved request answers from its record (did L&D give the final approval?);
+ * an open one from its unit's setting, unless it is already with HR Head.
+ */
+function hrNotRequiredFor(d: RequestDetail): string | null {
+  const bu = d.businessUnit;
+  if (!bu) return null;
+  const approvals = d.actions.filter((a) => a.action === "APPROVE");
+  if (approvals.some((a) => a.fromStatus === "PENDING_HR")) return null;
+  if (d.request.status === "APPROVED") return approvals.at(-1)?.fromStatus === "PENDING_LND" ? bu.name : null;
+  if (d.request.status === "PENDING_HR") return null;
+  return bu.requiresHrApproval ? null : bu.name;
+}
+
 export function pdfDataFromDetail(d: RequestDetail): PdfData {
   const r = d.request;
   return {
@@ -41,5 +56,6 @@ export function pdfDataFromDetail(d: RequestDetail): PdfData {
     hrdcClaimable: r.hrdcClaimable,
     hrdcGrantNo: r.hrdcGrantNo,
     lndRemarks: r.lndRemarks,
+    hrNotRequiredFor: hrNotRequiredFor(d),
   };
 }

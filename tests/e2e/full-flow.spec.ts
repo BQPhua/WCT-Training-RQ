@@ -1,13 +1,13 @@
 import { expect, test } from "@playwright/test";
 import { decide, signInAs } from "./helpers";
 
-test("request → HOD → BU Admin → L&D rejects → resubmit → full approval → PDF + Excel → history", async ({ browser, request }) => {
+test("E&C request → HOD → BU Admin → L&D rejects → resubmit → full approval by HR Head → PDF + Excel → history", async ({ browser, request }) => {
   // Five people act in turn; on a cold dev server (CI) each page compiles on first visit.
   test.setTimeout(180_000);
   const title = `E2E Fire Warden Training ${Date.now()}`;
 
   // 1. Requester raises and submits (names typed by hand)
-  const req = await signInAs(browser, "requester@demo.wct.my");
+  const req = await signInAs(browser, "requester.enc@demo.wct.my");
   await req.goto("requests/new");
   await expect(req.getByRole("heading", { name: "New Training Requisition" })).toBeVisible();
   await expect(req.getByText("WCT-F-4.18-2")).toHaveCount(0);
@@ -29,12 +29,12 @@ test("request → HOD → BU Admin → L&D rejects → resubmit → full approva
   await expect(req.getByText("Pending HOD").first()).toBeVisible();
 
   // 2. HOD approves → BU Admin
-  const hod = await signInAs(browser, "hod.land@demo.wct.my");
+  const hod = await signInAs(browser, "hod.enc@demo.wct.my");
   await decide(hod, url, "approve");
   await expect(hod.getByText("Pending BU Admin").first()).toBeVisible();
 
   // 3. BU Admin approves → L&D
-  const bua = await signInAs(browser, "buadmin.land@demo.wct.my");
+  const bua = await signInAs(browser, "buadmin.enc@demo.wct.my");
   await decide(bua, url, "approve");
   await expect(bua.getByText("Pending L&D").first()).toBeVisible();
 
@@ -51,8 +51,8 @@ test("request → HOD → BU Admin → L&D rejects → resubmit → full approva
   // Requester is told; everyone who approved this round is copied
   const sink = await (await request.get("api/dev/flow-sink")).json();
   const rejected = sink.filter((p: { event: string; title: string }) => p.event === "REJECTED" && p.title === title).at(-1);
-  expect(rejected.to).toEqual(["requester@demo.wct.my"]);
-  expect(rejected.cc).toEqual(expect.arrayContaining(["hod.land@demo.wct.my", "buadmin.land@demo.wct.my"]));
+  expect(rejected.to).toEqual(["requester.enc@demo.wct.my"]);
+  expect(rejected.cc).toEqual(expect.arrayContaining(["hod.enc@demo.wct.my", "buadmin.enc@demo.wct.my"]));
 
   // 5. Requester amends and resubmits: restarts at HOD
   await req.goto(`${url}/edit`);
@@ -66,8 +66,9 @@ test("request → HOD → BU Admin → L&D rejects → resubmit → full approva
   await decide(hod, url, "approve");
   await decide(bua, url, "approve");
   await decide(lnd, url, "approve");
+  await expect(lnd.getByText("Pending HR Head").first()).toBeVisible();
   const hr = await signInAs(browser, "hrhead@demo.wct.my");
-  await decide(hr, url, "approve");
+  await decide(hr, url, "final");
   await expect(hr.getByText("Approved").first()).toBeVisible();
 
   // 7. PDF and Excel
@@ -83,6 +84,38 @@ test("request → HOD → BU Admin → L&D rejects → resubmit → full approva
   await hr.goto(`history?q=${encodeURIComponent("Daniel Lim")}`);
   await expect(hr.getByRole("heading", { name: "Training RQ History" })).toBeVisible();
   await expect(hr.getByRole("table").getByText(title)).toBeVisible();
+});
+
+test("Land request is finalised by L&D: no HR Head step", async ({ browser }) => {
+  test.setTimeout(180_000);
+  const title = `E2E Land Site Safety ${Date.now()}`;
+  const req = await signInAs(browser, "requester@demo.wct.my");
+  await req.goto("requests/new");
+  const route = req.getByRole("complementary").filter({ hasText: "Approval route" });
+  await expect(route.getByText("Reviews and gives final approval")).toBeVisible();
+  await expect(route.getByText("HR Head")).toHaveCount(0);
+  await req.getByLabel("Planned training").check();
+  await req.locator("#title").fill(title);
+  await req.locator("#objective").fill("Site safety refresher.");
+  await req.locator("#relevancy").fill("Required for the new phase handover.");
+  await req.locator("#startDate").fill("2026-12-08");
+  await req.locator("#feePerPax").fill("200.00");
+  await req.locator("#venue").fill("WCT Tower, Level 12");
+  await req.locator("#conductedBy").fill("NIOSH");
+  await req.locator("#candidate-1").fill("Aisyah Rahman");
+  await req.getByRole("button", { name: "Review & submit" }).click();
+  await req.getByRole("dialog").getByRole("button", { name: "Submit to HOD" }).click();
+  await expect(req).toHaveURL(/\/requests\/[0-9a-f-]{36}\?submitted=1/);
+  const url = req.url().replace(/\?.*$/, "");
+  await expect(req.getByText("HR Head")).toHaveCount(0);
+
+  await decide(await signInAs(browser, "hod.land@demo.wct.my"), url, "approve");
+  await decide(await signInAs(browser, "buadmin.land@demo.wct.my"), url, "approve");
+  const lnd = await signInAs(browser, "lnd1@demo.wct.my");
+  await decide(lnd, url, "final");
+  await expect(lnd.getByText("Approved").first()).toBeVisible();
+  await expect(lnd.getByText("Final approval (L&D)").first()).toBeVisible();
+  await expect(lnd.getByText("Pending HR Head")).toHaveCount(0);
 });
 
 test("name list replaces typed names", async ({ browser }) => {

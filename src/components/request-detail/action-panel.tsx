@@ -56,7 +56,9 @@ export function ActionPanel({
     setRemark("");
     toast.success(
       type === "APPROVE"
-        ? "Approved and passed to the next stage"
+        ? r.status === "APPROVED"
+          ? "Final approval given. The request is approved."
+          : "Approved and passed to the next stage"
         : type === "REJECT"
           ? "Returned to requester"
           : type === "CANCEL"

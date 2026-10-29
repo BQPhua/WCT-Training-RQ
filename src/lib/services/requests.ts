@@ -238,6 +238,13 @@ async function assertDemoScope(tx: Tx, user: CurrentUser, requesterId: string): 
 }
 
 /** A request can only move towards the BU Admin step when its business unit has one. */
+/** Read at the time of each action, so an admin's change applies to the next L&D approval. No unit → true. */
+async function buRequiresHrApproval(tx: Tx, businessUnitId: string | null): Promise<boolean> {
+  if (!businessUnitId) return true;
+  const [bu] = await tx.select({ v: businessUnits.requiresHrApproval }).from(businessUnits).where(eq(businessUnits.id, businessUnitId));
+  return bu?.v ?? true;
+}
+
 async function assertBuAdmin(tx: Tx, businessUnitId: string | null, forRequester: boolean, world: World) {
   const { buAdmin } = await roleHolderCounts(tx, businessUnitId, world);
   if (buAdmin > 0) return;
@@ -282,7 +289,8 @@ export async function performAction(
 
     const counts = await roleHolderCounts(tx, businessUnitId, world);
     // transition() first, so someone without rights gets FORBIDDEN rather than the BU Admin message.
-    const t = transition({ ...ref(r), departmentId, businessUnitId }, user.actor, { type: input.type, remark: input.remark }, counts);
+    const requiresHrApproval = await buRequiresHrApproval(tx, businessUnitId);
+    const t = transition({ ...ref(r), departmentId, businessUnitId, requiresHrApproval }, user.actor, { type: input.type, remark: input.remark }, counts);
     if (t.toStatus === "PENDING_BU" || (isSubmit && t.toStatus === "PENDING_HOD")) await assertBuAdmin(tx, businessUnitId, isSubmit, world);
     const now = new Date();
 
