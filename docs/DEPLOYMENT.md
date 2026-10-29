@@ -161,6 +161,20 @@ The sign-in button shows Microsoft's logo when `public/brand/microsoft-logo.svg`
 
 Until the file is there, the button shows a key icon.
 
+## Sign-in photo
+
+The sign-in page shows Paradigm Mall at dusk (`public/brand/signin-paradigm-{1420,710}.{avif,webp,jpg}`). The supplied photo was only 355×284, so it was upscaled 4× with Real-ESRGAN to 1420×1136. That is sharp on a 1080p screen, where the photo half of the page is about 1056×1080. On 1440p or high-DPI laptop screens it is slightly soft.
+
+To replace it with a larger original (at least 2400 px wide, ideally), run once on any machine with Python:
+
+```
+pip install onnx onnxruntime pillow numpy
+curl -LO https://github.com/xinntao/Real-ESRGAN/releases/download/v0.1.0/RealESRGAN_x4plus.pth
+python3 -I scripts/prepare-signin-image.py RealESRGAN_x4plus.pth new-photo.jpg public/brand
+```
+
+For an original already 2400 px or wider, skip the upscale: export the same six files at its own width and half width, and update the widths in `src/app/signin/page.tsx`.
+
 ## Release checklist (each deploy)
 
 **Before**

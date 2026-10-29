@@ -3,6 +3,8 @@ import path from "node:path";
 import Image from "next/image";
 import { redirect } from "next/navigation";
 import { KeyRound } from "lucide-react";
+import * as motion from "motion/react-client";
+import { FadeRise } from "@/components/motion/fade-rise";
 import logo from "@/components/shell/wct-logo.png";
 import { Button } from "@/components/ui/button";
 import { getCurrentUser } from "@/lib/auth/current-user";
@@ -52,42 +54,50 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
   const groups = ROLE_ORDER.map((role) => ({ role, accounts: accounts.filter((a) => primaryRole(a.roleLabel) === role) })).filter((g) => g.accounts.length);
 
   return (
-    <div className="relative min-h-dvh overflow-hidden bg-[#1c232d]">
-      {/* Soft, blurred copy of the photo fills any space the photo itself doesn't cover. */}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={`${BASE_PATH}/brand/signin-bg-blur.jpg`} alt="" aria-hidden className="absolute inset-0 size-full scale-110 object-cover blur-2xl brightness-75" />
+    <div className="min-h-dvh bg-ground lg:grid lg:grid-cols-[minmax(0,55fr)_minmax(0,45fr)]">
       {/*
-        Decorative photo of WCT's headquarters (its own logo and slogan sit on the left).
-        It always fits the screen height and keeps its proportions, so the whole picture
-        shows at any screen size instead of being blown up and cropped; on very wide
-        screens its right edge fades into the blurred copy.
+        Paradigm Mall at dusk (a WCT property), upscaled 4x with Real-ESRGAN to 1420x1136
+        (scripts/prepare-signin-image.py). The panel's shape is close to the photo's, so on a
+        1080p screen it is shown at or below its own size and stays sharp.
       */}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={`${BASE_PATH}/brand/signin-bg.jpg`}
-        alt=""
-        aria-hidden
-        width={2384}
-        height={1340}
-        className="absolute inset-y-0 left-0 h-full w-auto max-w-none [mask-image:linear-gradient(to_right,black_82%,transparent)]"
-      />
-      <div aria-hidden className="absolute inset-0 bg-[#10151c]/60 lg:bg-transparent lg:bg-gradient-to-r lg:from-transparent lg:from-45% lg:to-[#10151c]/75" />
-
-      <main id="main" className="relative z-10 flex min-h-dvh items-center justify-center px-4 py-10 lg:justify-end lg:pr-[7vw]">
-        <div className="w-full max-w-[440px] animate-rise rounded-2xl bg-surface/92 p-6 shadow-[0_24px_80px_-20px_rgb(0_0_0/0.6)] ring-1 ring-white/15 backdrop-blur-xl sm:p-8">
-          <div className="flex items-center gap-3">
-            <span className="rounded-lg bg-white px-2 py-1.5 ring-1 ring-black/5">
-              <Image src={logo} alt="WCT" unoptimized priority className="h-10 w-auto" />
+      <section aria-label="WCT Holdings Berhad" className="relative h-[34dvh] min-h-52 overflow-hidden bg-shell lg:sticky lg:top-0 lg:h-dvh">
+        <picture>
+          <source type="image/avif" srcSet={`${BASE_PATH}/brand/signin-paradigm-710.avif 710w, ${BASE_PATH}/brand/signin-paradigm-1420.avif 1420w`} sizes="(min-width: 1024px) 55vw, 100vw" />
+          <source type="image/webp" srcSet={`${BASE_PATH}/brand/signin-paradigm-710.webp 710w, ${BASE_PATH}/brand/signin-paradigm-1420.webp 1420w`} sizes="(min-width: 1024px) 55vw, 100vw" />
+          <motion.img
+            data-testid="signin-photo"
+            src={`${BASE_PATH}/brand/signin-paradigm-1420.jpg`}
+            srcSet={`${BASE_PATH}/brand/signin-paradigm-710.jpg 710w, ${BASE_PATH}/brand/signin-paradigm-1420.jpg 1420w`}
+            sizes="(min-width: 1024px) 55vw, 100vw"
+            alt="Paradigm Mall at dusk"
+            width={1420}
+            height={1136}
+            fetchPriority="high"
+            className="absolute inset-0 size-full object-cover object-[50%_62%]"
+            initial={{ scale: 1.04 }}
+            animate={{ scale: 1 }}
+            transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
+          />
+        </picture>
+        <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-shell via-shell/55 to-transparent to-80% lg:via-shell/10 lg:to-60%" />
+        <div className="absolute inset-x-0 bottom-0 flex items-end gap-4 p-5 sm:p-7 lg:p-10">
+          <span className="shrink-0 rounded-lg bg-white px-2 py-1.5 shadow-md">
+            <Image src={logo} alt="WCT" unoptimized priority className="h-9 w-auto lg:h-11" />
+          </span>
+          <span className="min-w-0 leading-tight">
+            <span className="block text-lg font-semibold tracking-[-0.01em] text-white lg:text-2xl">Training Requisition</span>
+            <span className="mt-0.5 block text-[13px] text-white/80 lg:text-sm">
+              WCT Holdings Berhad<span className="hidden sm:inline"> · Human Resources &amp; Administration</span>
             </span>
-            <span className="border-l border-line pl-3 leading-tight">
-              <span className="block text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">WCT HR Forms</span>
-              <span className="block text-[15px] font-semibold text-ink">Training RQ</span>
-            </span>
-          </div>
+          </span>
+        </div>
+      </section>
 
-          <h1 className="mt-7 text-[26px] font-semibold leading-tight tracking-tight text-ink">Training Requisition</h1>
+      <main id="main" className="flex justify-center px-5 py-9 sm:px-8 lg:items-center lg:py-14">
+        <FadeRise className="w-full max-w-[420px]">
+          <h1 className="text-[26px] font-semibold leading-tight tracking-[-0.02em] text-ink">Sign in to Training RQ</h1>
           <p className="mt-2 text-sm leading-relaxed text-muted">
-            Raise a training request, follow it through HOD, BU Admin, L&amp;D and HR Head approval, and print the signed-off form.
+            Raise a training request, follow it along its approval route, and print the signed-off form.
           </p>
 
           {error && (
@@ -97,12 +107,12 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
           )}
           {sp.signedout && !error && <p className="mt-5 rounded-lg bg-approved-soft px-4 py-3 text-sm text-approved-text">You have signed out.</p>}
 
-          <Button asChild variant="primary" size="lg" className="mt-6 w-full">
+          <Button asChild variant="brand" size="lg" className="mt-6 h-12 w-full">
             <a href={`${BASE_PATH}/api/auth/login?returnTo=${encodeURIComponent(returnTo)}`} aria-disabled={!isEntraConfigured()}>
               {hasMicrosoftLogo() ? (
                 // Official asset from Microsoft's identity platform branding guidelines (added by the deployer).
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={`${BASE_PATH}/brand/microsoft-logo.svg`} alt="" width={20} height={20} className="size-5" />
+                <img src={`${BASE_PATH}/brand/microsoft-logo.svg`} alt="" width={20} height={20} className="size-5 rounded-[2px] bg-white p-px" />
               ) : (
                 <KeyRound />
               )}{" "}
@@ -114,17 +124,17 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
           </p>
 
           {demo && accounts.length > 0 && (
-            <section aria-labelledby="demo-title" className="mt-7 border-t border-line pt-5">
+            <section aria-labelledby="demo-title" className="mt-8 border-t border-line pt-6">
               <h2 id="demo-title" className="text-sm font-semibold text-ink">
                 Try a demo account
               </h2>
-              <p className="mt-0.5 text-xs leading-relaxed text-muted">Pick a role to see its screens. Demo accounts only see demo requests.</p>
-              <form action={`${BASE_PATH}/api/auth/demo-login`} method="post" className="mt-3 space-y-2.5">
+              <p className="mt-0.5 text-[13px] leading-relaxed text-muted">Pick a role to see its screens. Demo accounts only see demo requests.</p>
+              <form action={`${BASE_PATH}/api/auth/demo-login`} method="post" className="mt-4 space-y-3">
                 <input type="hidden" name="returnTo" value={returnTo} />
                 {groups.map((g) => (
                   <div key={g.role} role="group" aria-label={g.role}>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">{g.role}</p>
-                    <div className="mt-1 flex flex-wrap gap-1.5">
+                    <p className="text-xs font-medium text-ink-2">{g.role}</p>
+                    <div className="mt-1.5 flex flex-wrap gap-1.5">
                       {g.accounts.map((a) => (
                         <button
                           key={a.id}
@@ -132,7 +142,7 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
                           value={a.id}
                           data-email={a.email}
                           title={`${a.name} · ${a.roleLabel}`}
-                          className="cursor-pointer rounded-full border border-line bg-surface px-3 py-1 text-[13px] font-medium text-ink transition-colors hover:border-brand hover:bg-brand-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                          className="cursor-pointer rounded-full border border-line-strong bg-surface px-3 py-1 text-[13px] font-medium text-ink shadow-sm transition-colors hover:border-info hover:bg-info-soft hover:text-info-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
                         >
                           {a.name}
                         </button>
@@ -143,10 +153,8 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
               </form>
             </section>
           )}
-        </div>
+        </FadeRise>
       </main>
-
-      <p className="absolute bottom-4 left-5 z-10 hidden text-xs text-white/70 lg:block">WCT Berhad · Human Resources &amp; Administration</p>
     </div>
   );
 }
