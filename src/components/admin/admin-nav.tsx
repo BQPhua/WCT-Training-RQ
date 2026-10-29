@@ -1,6 +1,8 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { motion } from "motion/react";
+import { SPRING } from "@/components/motion/fade-rise";
 import { cn } from "@/lib/utils";
 
 const TABS = [
@@ -20,11 +22,12 @@ export function AdminNav() {
           href={href}
           aria-current={pathname === href ? "page" : undefined}
           className={cn(
-            "-mb-px inline-flex h-10 items-center whitespace-nowrap border-b-2 px-3 text-sm font-medium transition-colors",
-            pathname === href ? "border-brand text-ink" : "border-transparent text-muted hover:text-ink",
+            "relative inline-flex h-11 items-center whitespace-nowrap px-3 text-sm font-medium transition-colors",
+            pathname === href ? "text-ink" : "text-muted hover:text-ink",
           )}
         >
           {label}
+          {pathname === href && <motion.span layoutId="admin-tab-underline" transition={SPRING} aria-hidden className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-brand" />}
         </Link>
       ))}
     </nav>
