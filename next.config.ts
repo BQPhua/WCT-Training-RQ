@@ -7,6 +7,8 @@ const nextConfig: NextConfig = {
   // rendering model is simpler and safer than Cache Components' static shell.
   cacheComponents: false,
   poweredByHeader: false,
+  // Dev only: keep the Next.js badge off the sidebar's user menu (bottom-left).
+  devIndicators: { position: "bottom-right" },
   serverExternalPackages: ["@react-pdf/renderer", "exceljs", "pdf-parse"],
   experimental: {
     serverActions: { bodySizeLimit: "12mb" },

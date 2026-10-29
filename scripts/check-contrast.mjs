@@ -60,6 +60,8 @@ const PAIRS = [
   ["shell-muted", "shell", 4.5],
   ["shell-fg", "shell-2", 4.5],
   ["shell-muted", "shell-dusk", 4.5],
+  ["shell-accent", "shell", 3],
+  ["shell-accent", "shell-2", 3],
   ["brand-fg", "brand", 4.5],
   ["brand-text", "surface", 4.5],
   ["brand", "surface", 3],

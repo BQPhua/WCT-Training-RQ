@@ -27,6 +27,8 @@
   --shell-line: oklch(0.34 0.06 268);
   --shell-fg: oklch(0.965 0.01 265);
   --shell-muted: oklch(0.8 0.04 265);
+  /* WCT red lifted for icons and marks on the navy shell (≥3:1 on --shell) */
+  --shell-accent: oklch(0.7 0.19 25);
 
   /* WCT red (logo #E30613) */
   --brand: oklch(0.578 0.233 27.6);
@@ -132,6 +134,7 @@
   --color-shell: var(--shell);
   --color-shell-2: var(--shell-2);
   --color-shell-dusk: var(--shell-dusk);
+  --color-shell-accent: var(--shell-accent);
   --color-shell-line: var(--shell-line);
   --color-shell-fg: var(--shell-fg);
   --color-shell-muted: var(--shell-muted);
