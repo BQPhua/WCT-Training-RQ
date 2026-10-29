@@ -24,6 +24,8 @@ export async function requesterContext(user: CurrentUser) {
       businessUnit: user.businessUnit?.name ?? null,
       hodName,
       buAdminNames: names,
+      /** Land and Malls end at L&D; E&C (or no unit) goes on to HR Head. */
+      requiresHrApproval: user.businessUnit?.requiresHrApproval ?? true,
     },
     departments: depts.map((d) => ({ id: d.id, name: d.name, buName: d.buName })),
   };

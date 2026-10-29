@@ -51,7 +51,9 @@ function headline(e: WorkflowEvent, actor: string, bu: string | null | undefined
     case "LND_APPROVED":
       return `The L&D Team (${actor}) has reviewed and approved this training request. It now awaits HR Head final approval.`;
     case "FINAL_APPROVED":
-      return `This training request has received final approval from the HR Head (${actor}).`;
+      return e.fromStatus === "PENDING_LND"
+        ? `This training request has received final approval from the L&D Team (${actor}).`
+        : `This training request has received final approval from the HR Head (${actor}).`;
     case "REJECTED":
       return `${actor} has rejected this training request and returned it to the requester for amendment.`;
     case "CANCELLED":

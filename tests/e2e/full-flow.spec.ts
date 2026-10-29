@@ -91,6 +91,9 @@ test("Land request is finalised by L&D: no HR Head step", async ({ browser }) =>
   const title = `E2E Land Site Safety ${Date.now()}`;
   const req = await signInAs(browser, "requester@demo.wct.my");
   await req.goto("requests/new");
+  const route = req.getByRole("complementary").filter({ hasText: "Approval route" });
+  await expect(route.getByText("Reviews and gives final approval")).toBeVisible();
+  await expect(route.getByText("HR Head")).toHaveCount(0);
   await req.getByLabel("Planned training").check();
   await req.locator("#title").fill(title);
   await req.locator("#objective").fill("Site safety refresher.");

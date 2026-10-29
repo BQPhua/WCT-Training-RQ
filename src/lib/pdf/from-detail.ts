@@ -41,5 +41,9 @@ export function pdfDataFromDetail(d: RequestDetail): PdfData {
     hrdcClaimable: r.hrdcClaimable,
     hrdcGrantNo: r.hrdcGrantNo,
     lndRemarks: r.lndRemarks,
+    hrNotRequiredFor:
+      d.businessUnit && !d.businessUnit.requiresHrApproval && !d.actions.some((a) => a.action === "APPROVE" && a.fromStatus === "PENDING_HR")
+        ? d.businessUnit.name
+        : null,
   };
 }

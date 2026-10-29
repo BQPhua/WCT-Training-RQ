@@ -39,7 +39,7 @@ export interface RequestFormProps {
   initialParticipantCount: number | null;
   initialNameList: AttachmentItem | null;
   initialAttachments: AttachmentItem[];
-  requester: { name: string; department: string | null; businessUnit: string | null; hodName: string | null; buAdminNames: string | null };
+  requester: { name: string; department: string | null; businessUnit: string | null; hodName: string | null; buAdminNames: string | null; requiresHrApproval: boolean };
   departments: { id: string; name: string; buName: string }[];
 }
 
@@ -444,8 +444,12 @@ export function RequestForm(props: RequestFormProps) {
                 ["You submit", props.requester.name],
                 ["Department HOD", props.requester.hodName ?? "Not assigned — contact HR"],
                 [props.requester.businessUnit ? `${props.requester.businessUnit} BU Admin` : "BU Admin", props.requester.buAdminNames ?? "Not assigned — contact HR"],
-                ["L&D Team", "Any L&D member reviews"],
-                ["HR Head", "Final approval"],
+                ...(props.requester.requiresHrApproval
+                  ? [
+                      ["L&D Team", "Any L&D member reviews"],
+                      ["HR Head", "Final approval"],
+                    ]
+                  : [["L&D Team", "Reviews and gives final approval"]]),
               ].map(([stage, who], i) => (
                 <li key={stage} className="relative flex gap-3 pl-0">
                   <span className={cn("relative z-10 mt-1 size-[15px] shrink-0 rounded-full border-2 bg-surface", i === 0 ? "border-brand" : "border-line-strong")} />

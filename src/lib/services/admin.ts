@@ -51,6 +51,8 @@ const buSchema = z.object({
   code: z.string().trim().toUpperCase().regex(/^[A-Z0-9_]{2,12}$/, "Code must be 2–12 letters/numbers"),
   name: z.string().trim().min(1).max(60),
   isActive: z.boolean(),
+  /** "Final approval by HR Head". Off: L&D gives final approval (Land, Malls). */
+  requiresHrApproval: z.boolean().default(true),
 });
 
 export async function upsertBusinessUnit(user: CurrentUser, input: z.input<typeof buSchema>) {
@@ -62,8 +64,12 @@ export async function upsertBusinessUnit(user: CurrentUser, input: z.input<typeo
     .where(and(eq(businessUnits.code, d.code), d.id ? ne(businessUnits.id, d.id) : sql`true`));
   if (dup) throw new ServiceError(`A business unit with code ${d.code} already exists.`, 422);
   const [row] = d.id
-    ? await db.update(businessUnits).set({ code: d.code, name: d.name, isActive: d.isActive }).where(eq(businessUnits.id, d.id)).returning()
-    : await db.insert(businessUnits).values({ code: d.code, name: d.name, isActive: d.isActive }).returning();
+    ? await db
+        .update(businessUnits)
+        .set({ code: d.code, name: d.name, isActive: d.isActive, requiresHrApproval: d.requiresHrApproval })
+        .where(eq(businessUnits.id, d.id))
+        .returning()
+    : await db.insert(businessUnits).values({ code: d.code, name: d.name, isActive: d.isActive, requiresHrApproval: d.requiresHrApproval }).returning();
   await audit(user, "business_unit", row.id, { ...d, op: d.id ? "update" : "create" });
   return row;
 }

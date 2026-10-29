@@ -63,6 +63,14 @@ describe("admin services", () => {
     await expect(updateUser(a, lnd.id, { isActive: false })).rejects.toThrow(/last system admin/i);
   });
 
+  it("upsertBusinessUnit stores requiresHrApproval (default true)", async () => {
+    const lnd = await realLnd();
+    const created = await upsertBusinessUnit(lnd, { code: "HOSP", name: "Hospitality", isActive: true });
+    expect(created.requiresHrApproval).toBe(true);
+    const updated = await upsertBusinessUnit(lnd, { id: created.id, code: "HOSP", name: "Hospitality", isActive: true, requiresHrApproval: false });
+    expect(updated.requiresHrApproval).toBe(false);
+  });
+
   it("gives the L&D team full admin access", async () => {
     const lnd = await realLnd();
     const bu = await upsertBusinessUnit(lnd, { code: "HOSP", name: "Hospitality", isActive: true });

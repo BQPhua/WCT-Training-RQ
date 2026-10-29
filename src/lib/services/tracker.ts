@@ -33,12 +33,19 @@ export function buildStations(d: RequestDetail, holders: { hod: string | null; b
         ? { key: "final", label: "Cancelled", state: "cancelled", when: d.request.finalisedAt }
         : { key: "final", label: "Approved", state: "upcoming" };
 
+  // Land and Malls end at L&D. Keep the HR Head station when the unit needs it, or when this
+  // request is actually with (or was approved by) HR Head, e.g. one in flight when the rule changed.
+  const hrApprovedThisRound = acts.some(
+    (a) => a.action === "APPROVE" && a.fromStatus === "PENDING_HR" && a.createdAt >= (submitted?.createdAt ?? new Date(0)),
+  );
+  const showHr = (d.businessUnit?.requiresHrApproval ?? true) || s === "PENDING_HR" || hrApprovedThisRound;
+
   return [
     first,
     stage("hod", "Department HOD", "PENDING_HOD", 0, holders.hod),
     stage("bu", "BU Admin", "PENDING_BU", 1, holders.bu ?? "BU Admin"),
     stage("lnd", "L&D review", "PENDING_LND", 2, "L&D Team"),
-    stage("hr", "HR Head", "PENDING_HR", 3, holders.hr),
+    ...(showHr ? [stage("hr", "HR Head", "PENDING_HR", 3, holders.hr)] : []),
     last,
   ];
 }

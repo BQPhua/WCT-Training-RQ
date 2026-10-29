@@ -17,7 +17,7 @@ async function run(fn: () => Promise<unknown>): Promise<ActionResult> {
   }
 }
 
-export async function saveBusinessUnitAction(input: { id?: string; code: string; name: string; isActive: boolean }) {
+export async function saveBusinessUnitAction(input: { id?: string; code: string; name: string; isActive: boolean; requiresHrApproval: boolean }) {
   return run(async () => upsertBusinessUnit(await requireApiUser(), input));
 }
 export async function saveBuAdminsAction(buId: string, userIds: string[]) {

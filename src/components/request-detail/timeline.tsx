@@ -45,6 +45,9 @@ export function Timeline({ actions }: { actions: TimelineAction[] }) {
                 <span className="font-semibold">{a.actor.name}</span> {m.verb}
                 {a.action === "APPROVE" && a.fromStatus && STAGE_OF_FROM[a.fromStatus] ? ` as ${STAGE_OF_FROM[a.fromStatus]}` : ""}
                 {a.action === "REJECT" && a.fromStatus && STAGE_OF_FROM[a.fromStatus] ? ` as ${STAGE_OF_FROM[a.fromStatus]}` : ""}
+                {a.action === "APPROVE" && a.fromStatus === "PENDING_LND" && a.toStatus === "APPROVED" && (
+                  <span className="ml-2 rounded bg-approved-soft px-1.5 py-0.5 text-[11px] font-medium text-approved-text">{"Final approval (L&D)"}</span>
+                )}
                 {a.selfApproved && <span className="ml-2 rounded bg-brand-soft px-1.5 py-0.5 text-[11px] font-medium text-brand-text">Self-approved</span>}
               </p>
               <p className="mt-0.5 text-xs tabular text-muted">
