@@ -83,6 +83,16 @@ describe("admin services", () => {
     expect(logs.some((l) => l.entity === "business_unit_flow")).toBe(true);
   });
 
+  it("updateBusinessUnitFlow only changes the fields it is given (no lost updates)", async () => {
+    const lnd = await realLnd();
+    const [land] = await db.select().from(businessUnits).where(eq(businessUnits.code, "LAND"));
+    await updateBusinessUnitFlow(lnd, land.id, { requiresBuAdmin: false });
+    const after = await updateBusinessUnitFlow(lnd, land.id, { stepNotes: { HOD: "Head of department" } });
+    expect(after.requiresBuAdmin).toBe(false);
+    expect(after.requiresHrApproval).toBe(false);
+    expect(after.stepNotes).toEqual({ HOD: "Head of department" });
+  });
+
   it("updateBusinessUnitFlow refuses demo admins, notes over 40 characters and unknown steps", async () => {
     const [land] = await db.select().from(businessUnits).where(eq(businessUnits.code, "LAND"));
     await expect(updateBusinessUnitFlow(await asUser("admin@demo.wct.my"), land.id, { requiresBuAdmin: true, requiresHrApproval: true, stepNotes: {} })).rejects.toThrow(

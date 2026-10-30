@@ -112,7 +112,9 @@ curl -I https://hrforms.wct.my/WCT-Training-RQ/signin   # expect 200
 
 ## 7. Scheduled jobs
 
-As `trq`, run `crontab -e` and paste the two lines from [`deploy/crontab.txt`](../deploy/crontab.txt). They retry failed notifications every 5 minutes and take a nightly backup.
+As `trq`, run `crontab -e` and paste the three job lines from [`deploy/crontab.txt`](../deploy/crontab.txt). They retry failed notifications every 5 minutes, copy Microsoft 365 staff in every night at 01:40, and take a nightly backup.
+
+**Existing servers (installed before the staff sync):** run `crontab -e` as `trq` and add only the `40 1 * * *` line from `deploy/crontab.txt`. Its log is `/opt/wct-training-rq/shared/directory-sync.log`.
 
 ## 8. Auto-deploy from GitHub
 
@@ -172,7 +174,7 @@ It runs every night at 01:40 from the crontab (`deploy/crontab.txt`), and from *
 
 - People who left WCT (no longer an enabled account) are flagged "No longer in Microsoft 365". Nobody is switched off automatically; deactivate them on the Users page.
 - Demo accounts and users an admin deactivated are never changed by the sync.
-- The log of the nightly run is `/var/log/wct-training-rq-sync.log`.
+- The log of the nightly run is `/opt/wct-training-rq/shared/directory-sync.log` (one timestamp and one JSON result per night; a failed run's error is kept).
 
 ## Sign-in photo
 

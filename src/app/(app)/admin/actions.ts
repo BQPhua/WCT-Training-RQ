@@ -48,7 +48,7 @@ export async function retryNotificationAction(logId: string) {
 
 export async function saveBusinessUnitFlowAction(
   buId: string,
-  input: { requiresBuAdmin: boolean; requiresHrApproval: boolean; stepNotes: Partial<Record<StepKey, string>> },
+  input: { requiresBuAdmin?: boolean; requiresHrApproval?: boolean; stepNotes?: Partial<Record<StepKey, string>> },
 ) {
   return run(async () => updateBusinessUnitFlow(await requireApiUser(), buId, input));
 }

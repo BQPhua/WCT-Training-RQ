@@ -44,6 +44,8 @@ export function PersonPicker({
   const seq = React.useRef(0);
 
   const timer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** Who was chosen before the user started typing: restored if they leave without picking. */
+  const beforeEdit = React.useRef<PickedPerson | null>(null);
 
   // When the parent changes the chosen person (e.g. clears it after "Add"), show that in the box.
   const [shown, setShown] = React.useState(value);
@@ -74,8 +76,15 @@ export function PersonPicker({
     }, 200);
   };
 
-  const pick = (p: PickedPerson) => {
+  /** Our own changes update `shown` too, so only outside changes (e.g. "Add" clearing it) reset the text. */
+  const emit = (p: PickedPerson | null) => {
+    setShown(p);
     onChange(p);
+  };
+
+  const pick = (p: PickedPerson) => {
+    beforeEdit.current = null;
+    emit(p);
     setText(p.name);
     setOpen(false);
   };
@@ -97,7 +106,10 @@ export function PersonPicker({
         value={text}
         onChange={(e) => {
           setText(e.target.value);
-          if (value) onChange(null);
+          if (value) {
+            beforeEdit.current = value;
+            emit(null);
+          }
           search(e.target.value);
         }}
         onKeyDown={(e) => {
@@ -115,7 +127,19 @@ export function PersonPicker({
             setOpen(false);
           }
         }}
-        onBlur={() => setTimeout(() => setOpen(false), 120)}
+        onBlur={() =>
+          setTimeout(() => {
+            setOpen(false);
+            // Leaving without picking: put back the person chosen before (or drop stray text), so a
+            // half-typed name never silently removes someone, e.g. a department's HOD.
+            if (!value && text.trim()) {
+              const prev = beforeEdit.current;
+              beforeEdit.current = null;
+              if (prev) emit(prev);
+              setText(prev?.name ?? "");
+            }
+          }, 120)
+        }
         className="field-control h-10 w-full rounded-md border border-line-strong bg-surface pl-9 pr-9 text-[15px] text-ink shadow-[inset_0_1px_1px_oklch(0.22_0.045_268/0.04)] outline-none placeholder:text-muted hover:border-ink-2/40 focus-visible:border-focus focus-visible:ring-[3px] focus-visible:ring-focus/25 disabled:cursor-not-allowed disabled:opacity-60 sm:text-sm"
       />
       {loading ? (
@@ -127,8 +151,9 @@ export function PersonPicker({
             aria-label="Clear"
             disabled={disabled}
             onClick={() => {
+              beforeEdit.current = null;
               setText("");
-              onChange(null);
+              emit(null);
               search("");
             }}
             className="absolute right-2 top-1/2 grid size-6 -translate-y-1/2 cursor-pointer place-items-center rounded text-muted hover:bg-ink/5 hover:text-ink"

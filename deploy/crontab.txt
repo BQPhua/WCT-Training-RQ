@@ -2,6 +2,6 @@
 # Retry failed Power Automate notifications every 5 minutes
 */5 * * * * set -a; . /opt/wct-training-rq/shared/.env; set +a; curl -fsS -X POST -H "Authorization: Bearer $CRON_SECRET" http://127.0.0.1:3110/WCT-Training-RQ/api/cron/notifications >/dev/null 2>&1
 # Copy Microsoft 365 staff into Training RQ every night at 01:40 (needs DIRECTORY_SEARCH_GRAPH=true)
-40 1 * * * set -a; . /opt/wct-training-rq/shared/.env; set +a; curl -fsS -X POST -H "Authorization: Bearer $CRON_SECRET" http://127.0.0.1:3110/WCT-Training-RQ/api/cron/directory-sync >> /var/log/wct-training-rq-sync.log 2>&1
+40 1 * * * set -a; . /opt/wct-training-rq/shared/.env; set +a; { date; curl -sS --fail-with-body --max-time 300 -X POST -H "Authorization: Bearer $CRON_SECRET" http://127.0.0.1:3110/WCT-Training-RQ/api/cron/directory-sync; echo; } >> /opt/wct-training-rq/shared/directory-sync.log 2>&1
 # Nightly backup at 02:15
 15 2 * * * /opt/wct-training-rq/repo/scripts/backup.sh >> /var/log/wct-training-rq-backup.log 2>&1

@@ -182,11 +182,12 @@ export const STEP_KEYS = ["REQUESTER", "HOD", "BU", "LND", "HR"] as const;
 export type StepKey = (typeof STEP_KEYS)[number];
 
 const flowSchema = z.object({
-  requiresBuAdmin: z.boolean(),
-  requiresHrApproval: z.boolean(),
+  requiresBuAdmin: z.boolean().optional(),
+  requiresHrApproval: z.boolean().optional(),
   stepNotes: z
     .object(Object.fromEntries(STEP_KEYS.map((k) => [k, z.string().trim().max(40, "Keep each description to 40 characters").optional()])) as Record<StepKey, z.ZodOptional<z.ZodString>>)
-    .strict(),
+    .strict()
+    .optional(),
 });
 
 /** The description under a step: the unit's own note, or a default that follows the route. */
@@ -207,19 +208,23 @@ export function noteFor(step: StepKey, bu: { requiresHrApproval: boolean; stepNo
   }
 }
 
-/** Switch a unit's optional steps (BU Admin, HR Head) and set step descriptions. Applies to the next approval. */
+/**
+ * Switch a unit's optional steps (BU Admin, HR Head) and/or set its step descriptions. Only the
+ * fields given are changed, so two admins editing different things never undo each other.
+ * Applies to the next approval.
+ */
 export async function updateBusinessUnitFlow(user: CurrentUser, buId: string, input: z.input<typeof flowSchema>) {
   requireAdmin(user);
   const id = UUID.parse(buId);
   const d = flowSchema.parse(input);
-  const stepNotes = Object.fromEntries(Object.entries(d.stepNotes).filter(([, v]) => v)) as Partial<Record<StepKey, string>>;
-  const [row] = await db
-    .update(businessUnits)
-    .set({ requiresBuAdmin: d.requiresBuAdmin, requiresHrApproval: d.requiresHrApproval, stepNotes })
-    .where(eq(businessUnits.id, id))
-    .returning();
+  const change: { requiresBuAdmin?: boolean; requiresHrApproval?: boolean; stepNotes?: Partial<Record<StepKey, string>> } = {};
+  if (d.requiresBuAdmin !== undefined) change.requiresBuAdmin = d.requiresBuAdmin;
+  if (d.requiresHrApproval !== undefined) change.requiresHrApproval = d.requiresHrApproval;
+  if (d.stepNotes) change.stepNotes = Object.fromEntries(Object.entries(d.stepNotes).filter(([, v]) => v)) as Partial<Record<StepKey, string>>;
+  if (!Object.keys(change).length) throw new ServiceError("Nothing to change.", 422);
+  const [row] = await db.update(businessUnits).set(change).where(eq(businessUnits.id, id)).returning();
   if (!row) throw new ServiceError("That business unit no longer exists.", 404);
-  await audit(user, "business_unit_flow", row.id, { requiresBuAdmin: d.requiresBuAdmin, requiresHrApproval: d.requiresHrApproval, stepNotes });
+  await audit(user, "business_unit_flow", row.id, change);
   return row;
 }
 

@@ -21,7 +21,9 @@ export function SyncPanel({ configured, readOnly, last }: SyncSummary) {
   return (
     <section aria-label="Microsoft 365 sync" className="flex flex-wrap items-center justify-between gap-3 border-b border-line bg-surface-2 px-5 py-3 sm:px-6">
       <p className="min-w-0 text-[13px] text-ink-2">
-        {!configured ? (
+        {readOnly && configured ? (
+          <>Staff are synced from Microsoft 365 every night. Sync details are shown to real admins only.</>
+        ) : !configured ? (
           <>Microsoft 365 sync is off. IT sets DIRECTORY_SEARCH_GRAPH=true and the ENTRA_* settings on the server to turn it on.</>
         ) : !last ? (
           <>Staff haven&apos;t been synced from Microsoft 365 yet. It runs every night at 1:40 AM, or use Sync now.</>

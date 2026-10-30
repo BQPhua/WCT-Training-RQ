@@ -29,7 +29,7 @@ export default async function UsersPage({ searchParams }: PageProps<"/admin/user
       <SyncPanel
         configured={directoryConfigFromEnv() !== null}
         readOnly={isDemoUser(user)}
-        last={last && { startedAt: last.startedAt.toISOString(), ok: last.ok, added: last.added, updated: last.updated, flagged: last.flagged, error: last.error, trigger: last.trigger }}
+        last={isDemoUser(user) || !last ? null : { startedAt: last.startedAt.toISOString(), ok: last.ok, added: last.added, updated: last.updated, flagged: last.flagged, error: last.error, trigger: last.trigger }}
       />
       <form className="flex flex-wrap items-center gap-3 border-b border-line px-5 py-3 sm:px-6">
         <div className="relative w-full max-w-sm">

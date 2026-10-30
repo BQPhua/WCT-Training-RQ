@@ -50,15 +50,9 @@ export function FlowCard({ unit, readOnly }: { unit: FlowUnit; readOnly: boolean
   const [confirm, setConfirm] = React.useState<StepKey | null>(null);
   const [editOpen, setEditOpen] = React.useState(false);
 
+  // Each control sends only what it changed, so it can't undo another admin's change.
   const save = (patch: Partial<Pick<FlowUnit, "requiresBuAdmin" | "requiresHrApproval" | "stepNotes">>, message: string) =>
-    exec(
-      saveBusinessUnitFlowAction(unit.id, {
-        requiresBuAdmin: patch.requiresBuAdmin ?? unit.requiresBuAdmin,
-        requiresHrApproval: patch.requiresHrApproval ?? unit.requiresHrApproval,
-        stepNotes: patch.stepNotes ?? unit.stepNotes,
-      }),
-      message,
-    );
+    exec(saveBusinessUnitFlowAction(unit.id, patch), message);
 
   const toggle = (step: "BU" | "HR", on: boolean) => {
     if (!on) return setConfirm(step); // switching a step off is confirmed first

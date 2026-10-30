@@ -141,3 +141,34 @@ describe("Users page data and triggers", () => {
     vi.unstubAllEnvs();
   });
 });
+
+describe("review fixes", () => {
+  it("someone who signs in after a complete sync is not flagged as no longer in Microsoft 365", async () => {
+    const { syncUserFromProfile } = await import("@/lib/auth/sync-user");
+    const { listUsers } = await import("@/lib/services/admin");
+    const { asUser } = await import("./helpers");
+    await sync([[person("oid-1", "a@wct.my")]]);
+    await syncUserFromProfile({ oid: "oid-new", email: "newhire@wct.my", name: "New Hire" });
+    await db.insert(users).values({ email: "it.admin@wct.my", name: "IT Admin" });
+    const [admin] = await db.select().from(users).where(eq(users.email, "it.admin@wct.my"));
+    const { roleAssignments } = await import("@/db/schema");
+    await db.insert(roleAssignments).values({ userId: admin.id, role: "SYS_ADMIN" });
+    const left = await listUsers(await asUser("it.admin@wct.my"), undefined, "left");
+    expect(left.map((u) => u.email)).not.toContain("newhire@wct.my");
+  });
+
+  it("an email match on an account with a different Microsoft ID is a conflict, not a takeover", async () => {
+    await sync([[person("oid-old", "hod.a@wct.my", { displayName: "Old HOD" })]]);
+    const run = await sync([[person("oid-new", "hod.a@wct.my", { displayName: "New Hire" })]]);
+    expect(run).toMatchObject({ ok: true, added: 0, updated: 0, skipped: 1 });
+    expect(await byEmail("hod.a@wct.my")).toMatchObject({ entraOid: "oid-old", name: "Old HOD" });
+  });
+
+  it("a database failure stores a safe message, never the SQL or staff details", async () => {
+    // A NUL character makes Postgres reject the insert: a real database error carrying the SQL and params.
+    const run = await sync([[person("oid-1", "secret@wct.my", { displayName: "Secret\u0000Person" })]]);
+    expect(run.ok).toBe(false);
+    expect(run.error).not.toMatch(/secret@wct\.my|Secret|insert into/i);
+    expect(run.error).toMatch(/Database error \(ref [A-Z0-9]+\)/);
+  });
+});

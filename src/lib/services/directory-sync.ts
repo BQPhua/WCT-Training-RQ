@@ -92,7 +92,15 @@ async function upsertPeople(people: DirPerson[], seenAt: Date, counts: Counts) {
       const byEmail = new Map(existing.map((u) => [u.email, u]));
 
       for (const p of batch) {
-        const ex: User | undefined = byOid.get(p.oid) ?? byEmail.get(p.email);
+        // Match by Microsoft ID, else by email — but only onto an account with no Microsoft ID yet.
+        // An email match on a *different* Microsoft ID (an address reused by a new hire) is a conflict:
+        // taking it over would hand the old account's roles and history to someone else.
+        const byMail = byEmail.get(p.email);
+        const ex: User | undefined = byOid.get(p.oid) ?? (byMail && (!byMail.entraOid || byMail.entraOid === p.oid) ? byMail : undefined);
+        if (!ex && byMail) {
+          counts.skipped++;
+          continue;
+        }
         if (isDemoEmail(p.email) || (ex && (isDemoEmail(ex.email) || !ex.isActive))) {
           counts.skipped++;
           continue;
@@ -145,6 +153,21 @@ async function countNoLongerInDirectory(since: Date): Promise<number> {
   return n;
 }
 
+/**
+ * A message safe to store and show on the Users page. Database errors carry the SQL and its
+ * parameters (staff names and emails), so those are logged on the server with a reference instead.
+ */
+function safeErrorMessage(e: unknown): string {
+  if (e instanceof ServiceError) return e.message;
+  const msg = e instanceof Error ? e.message : String(e);
+  if (/^Microsoft (Graph|sign-in)/.test(msg)) return msg;
+  if (e instanceof Error && (e.name === "TimeoutError" || e.name === "AbortError")) return "Microsoft 365 did not answer in time. The next run will try again.";
+  if (e instanceof TypeError && /fetch/i.test(msg)) return "Could not reach Microsoft 365 (network error). The next run will try again.";
+  const ref = Math.random().toString(36).slice(2, 8).toUpperCase();
+  console.error(`[directory-sync] ref ${ref}:`, e);
+  return msg.startsWith("Failed query") ? `Database error (ref ${ref}). Details are in the server log.` : `Unexpected error (ref ${ref}). Details are in the server log.`;
+}
+
 /** Run one sync. Only one runs at a time (a unique index allows a single unfinished run). */
 export async function runDirectorySync(opts: {
   trigger: "cron" | "manual";
@@ -177,7 +200,7 @@ export async function runDirectorySync(opts: {
     const flagged = await countNoLongerInDirectory(run.startedAt);
     [run] = await db.update(directorySyncRuns).set({ ...counts, flagged, ok: true, finishedAt: new Date() }).where(eq(directorySyncRuns.id, run.id)).returning();
   } catch (e) {
-    const error = e instanceof Error ? e.message : String(e);
+    const error = safeErrorMessage(e);
     [run] = await db.update(directorySyncRuns).set({ ...counts, flagged: 0, ok: false, error, finishedAt: new Date() }).where(eq(directorySyncRuns.id, run.id)).returning();
   }
   return run;
