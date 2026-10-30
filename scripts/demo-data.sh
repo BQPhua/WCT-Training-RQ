@@ -20,6 +20,18 @@ remove_demo() {
   psql "$DATABASE_URL" -q -f scripts/demo-data-remove.sql
 }
 
+# Reload the app from a clean environment. `pm2 reload --update-env` copies the caller's variables
+# into the app, and Next.js lets those win over shared/.env, so this script's copy of the old
+# .env (loaded above, before any edit) must never reach PM2.
+reload_app() {
+  env -i HOME="${HOME:-}" PATH="$PATH" USER="${USER:-}" LANG="${LANG:-C.UTF-8}" ${PM2_HOME:+PM2_HOME="$PM2_HOME"} \
+    "${PM2_BIN:-pm2}" reload wct-training-rq --update-env
+}
+
+demo_counts() {
+  psql "$DATABASE_URL" -Atc "select (select count(*) from users where email like '%@demo.wct.my') || ' demo accounts, ' || (select count(*) from training_requests r join users u on u.id = r.requester_id where u.email like '%@demo.wct.my') || ' demo requests'"
+}
+
 case "${1:-}" in
   load)
     SEED_DEMO=true npx tsx scripts/seed.ts
@@ -45,7 +57,16 @@ case "${1:-}" in
     else
       printf '\nDEMO_LOGIN=false\n' >> "$env_file"
     fi
-    "${PM2_BIN:-pm2}" reload wct-training-rq --update-env
+    reload_app
+    echo "Left: $(demo_counts)"
+    # Confirm the live app has demo sign-in off (the endpoint answers 404 then).
+    code=""
+    for _ in 1 2 3 4 5 6 7 8 9 10; do
+      code=$(curl -s -o /dev/null -w '%{http_code}' -X POST "http://127.0.0.1:${PORT:-3110}/WCT-Training-RQ/api/auth/demo-login" 2>/dev/null || true)
+      [ "$code" = "404" ] && break
+      sleep 2
+    done
+    if [ "$code" = "404" ]; then echo "Checked: the app has demo sign-in off."; else echo "Could not confirm demo sign-in is off (got '${code:-no answer}'). Open the sign-in page and check 'Try a demo account' is gone." >&2; fi
     echo "Done: demo sign-in is off and the app was reloaded."
     echo "Next: check Admin settings → Roles and Business units, and assign the real L&D Team, HR Head, HODs and BU Admins."
     ;;
