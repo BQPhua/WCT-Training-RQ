@@ -228,7 +228,7 @@ The palette is cool twilight neutrals, one brand red and one sky blue, plus a st
 
 ## Layout
 
-A fixed 256px twilight rail beside a scrolling work column capped at 1320px. The column is padded 16px on phones, 24px from 640px and 40px from 1024px. Below 1024px the rail becomes a 56px navy header with a menu button, the logo and a red icon-only "New request" button; navigation opens as a left drawer that slides in.
+A fixed 256px twilight rail (collapsible to a 72px icon rail, remembered per browser) beside a scrolling work column capped at 1320px. The column is padded 16px on phones, 24px from 640px and 40px from 1024px. Below 1024px the rail becomes a 56px navy header with a menu button, the logo and a red icon-only "New request" button; navigation opens as a left drawer that slides in.
 
 Pages stack in a 24px rhythm. The dashboard and detail pages split at 1280px into a fluid main column and a 380px side column. Below 1280px the request form's actions are pinned to the bottom of the screen. Tables scroll sideways inside their card on narrow screens; request lists switch to stacked cards below 640px.
 
@@ -251,6 +251,10 @@ Flat cards on a hairline with a soft, layered shadow (`--shadow-sm`: 1–3px). M
 - **Tabs:** text tabs with a red 2px underline that glides to the active tab.
 - **Route tracker:** stations for each approval on the request's own route (three or four approvals: Land and Malls end at L&D, E&C goes on to HR Head). Completed legs fill one after another.
 - **Key figures:** one card divided by hairlines; the awaiting figure is red with a beacon when non-zero.
+- **Approval flow stepper** (Admin settings): numbered 28px circles joined by a thin line, a bold step name, and a muted 13px description below, following the steps shown in the Repair Service Order. Switched-off steps show a dash, a struck-through name and "Skipped". A green check closes the row ("Approved by …"). On phones it wraps to a vertical list.
+- **Switch:** a 36×20px pill, green when on, used for optional route steps.
+- **Person picker:** a search field (ARIA combobox) with a dropdown of up to 10 people (name, email, department). Highlighted option on sky wash; arrow keys and Enter to pick.
+- **Collapsed rail:** 72px, icons only, labels as tooltips; the approvals count becomes a red dot with a ring.
 - **Availability board:** this year's requests as status-coloured tiles by month; units waiting for you carry a red ring.
 - **Dialogs, menus, drawer:** scale or slide in and out (Motion presence over Radix).
 

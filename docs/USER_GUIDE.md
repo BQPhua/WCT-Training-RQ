@@ -52,11 +52,22 @@ The L&D Team manages every training requisition, so L&D members have full System
 
 **Admin settings** lets you manage:
 
+- **Approval flow** (opens first): each business unit's route as numbered steps (Raise → Department HOD → BU Admin → L&D Team → HR Head → Approved).
+  - Use the switches to skip the **BU Admin** or **HR Head** step for a unit. You'll be asked to confirm before a step is switched off.
+  - Changes apply to the next approval. Requests already waiting at a step stay there and can still be approved.
+  - **Edit descriptions** changes the short text under each step.
 - Business units and BU Admins
 - Head of Departments (each department and its HOD)
 - Roles (L&D Team (System Admin), HR Head, System Admin)
-- Users: fix departments, deactivate leavers, pre-register new HODs
+- Users:
+  - Every enabled WCT staff member is copied from Microsoft 365 each night, so you can assign anyone before they first sign in. **Sync now** updates the list straight away.
+  - Use **Show** to list who hasn't signed in yet, or who is no longer in Microsoft 365. Nobody is switched off automatically; deactivate leavers here.
+  - Fix unmatched departments here.
 - Notification log, with **Retry** for failed sends
+
+To add someone as a BU Admin, HOD or role holder, type two or more letters of their name or email in the picker, choose them from the list (or use the arrow keys and Enter), then click **Add**.
+
+On a desktop, **Collapse sidebar** at the foot of the menu shrinks it to icons. Hover an icon to see its name. Your choice is remembered on that browser.
 - **View as demo user** (your user menu): see the system exactly as a demo Requester, HOD, BU Admin, L&D or HR Head. A banner shows who you're viewing as; click **Exit** to return. Only `@demo.wct.my` accounts can be viewed.
 
 Settings changes are still recorded in the database for security, but there is no audit log screen.
