@@ -94,11 +94,11 @@ curl http://127.0.0.1:3110/WCT-Training-RQ/api/health  # {"ok":true,"db":true}
 > **Sample data for a trial run** (optional): `sudo -iu trq /opt/wct-training-rq/current/scripts/demo-data.sh load`
 > - It adds 12 demo people (`@demo.wct.my`), 7 demo departments and about 30 requests in every status. No emails are sent.
 > - Load it **before** you create real departments.
-> - **Go-live order:** first assign the real BU Admins (Land, E&C, Malls), L&D Team and HR Head in **Admin settings**, then run `… demo-data.sh remove`. Removing the demo data also removes the demo BU Admins, and requests can't be submitted while a business unit has no BU Admin.
+> - **Go-live order:** first assign the real BU Admins (Land, E&C, Malls), L&D Team and HR Head in **Admin settings** (with the Microsoft 365 sync on, everyone is already listed, so just type their name), then run the go-live command below. Removing the demo data also removes the demo BU Admins, and requests can't be submitted while a business unit whose route has the BU Admin step has no BU Admin.
 > - Demo and real staff never mix: demo requests are routed and emailed only to demo accounts, and real requests only to real staff. A real request therefore needs a real BU Admin for its business unit, and real approvers handle demo requests only through **View as demo user**.
 > - Demo accounts only ever see and act on requests raised by demo accounts (lists, dashboard, analytics, exports, request pages, files), and Admin settings are read-only for them, listing demo accounts only.
 > - **Demo sign-in for stakeholders:** add `DEMO_LOGIN=true` to `shared/.env`, then `sudo -iu trq pm2 reload wct-training-rq --update-env`. The sign-in page shows "Try a demo account" with one button per demo person, grouped by role.
-> - **At go-live:** remove `DEMO_LOGIN` from `shared/.env` and reload **first**, then assign real role holders, then run `demo-data.sh remove`.
+> - **At go-live, one command:** `sudo -iu trq /opt/wct-training-rq/current/scripts/demo-data.sh golive`. It shows how many demo accounts and requests it will remove and asks you to type `GO-LIVE`. It then removes all demo data (accounts, requests, files, demo departments), sets `DEMO_LOGIN=false` in `shared/.env` (keeping a `.env.bak-<date>` copy) and reloads the app. Running it twice is harmless.
 > - Removal deletes only demo records, and reference numbers continue from the highest real one.
 
 ## 6. Nginx
