@@ -161,6 +161,19 @@ The sign-in button shows Microsoft's logo when `public/brand/microsoft-logo.svg`
 
 Until the file is there, the button shows a key icon.
 
+## Microsoft 365 staff sync
+
+Training RQ copies every enabled WCT staff member (name, email, job title, department) from Microsoft 365 into its user list, so L&D can assign roles to people before they first sign in. It needs:
+
+- the Graph application permission `User.Read.All` with admin consent (see ENTRA_SETUP.md);
+- `DIRECTORY_SEARCH_GRAPH=true` and the `ENTRA_*` settings in `shared/.env`.
+
+It runs every night at 01:40 from the crontab (`deploy/crontab.txt`), and from **Admin settings → Users → Sync now**. The Users page shows when the last sync ran and how many people were added or updated.
+
+- People who left WCT (no longer an enabled account) are flagged "No longer in Microsoft 365". Nobody is switched off automatically; deactivate them on the Users page.
+- Demo accounts and users an admin deactivated are never changed by the sync.
+- The log of the nightly run is `/var/log/wct-training-rq-sync.log`.
+
 ## Sign-in photo
 
 The sign-in page shows Paradigm Mall at dusk (`public/brand/signin-paradigm-{1420,710}.{avif,webp,jpg}`). The supplied photo was only 355×284, so it was upscaled 4× with Real-ESRGAN to 1420×1136. That is sharp on a 1080p screen, where the photo half of the page is about 1056×1080. On 1440p or high-DPI laptop screens it is slightly soft.

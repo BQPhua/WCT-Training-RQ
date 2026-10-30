@@ -1,6 +1,7 @@
 import "server-only";
+import { lastCompleteSyncStart, runDirectorySync } from "./directory-sync";
 import { routeOf } from "@/lib/workflow/route";
-import { and, asc, countDistinct, desc, eq, ilike, inArray, like as sqlLike, ne, not, or, sql, type SQL } from "drizzle-orm";
+import { and, asc, countDistinct, desc, eq, ilike, inArray, isNotNull, isNull, like as sqlLike, lt, ne, not, or, sql, type SQL } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
 import {
@@ -275,16 +276,46 @@ export async function adminOverview(user: CurrentUser) {
   return { bus, depts: shownDepts, buAdmins, roles, failedNotifications: failed };
 }
 
-export async function listUsers(user: CurrentUser, q?: string) {
+export type UserStatusFilter = "all" | "signed-in" | "not-signed-in" | "left";
+
+/**
+ * Users for Admin settings → Users (at most 200; search to narrow). `leftDirectory` marks an
+ * active person with a Microsoft ID whom the last complete Microsoft 365 sync did not find.
+ */
+export async function listUsers(user: CurrentUser, q?: string, status: UserStatusFilter = "all") {
   requireAdminRead(user);
   const like = q ? `%${q.replace(/[%_\\]/g, "\\$&")}%` : null;
-  return db
-    .select({ id: users.id, name: users.name, email: users.email, jobTitle: users.jobTitle, isActive: users.isActive, departmentId: users.departmentId, entraDepartment: users.entraDepartment, lastLoginAt: users.lastLoginAt, departmentName: departments.name })
+  const since = await lastCompleteSyncStart();
+  const left = since
+    ? and(eq(users.isActive, true), isNotNull(users.entraOid), or(isNull(users.directorySeenAt), lt(users.directorySeenAt, since)))
+    : sql`false`;
+  const statusWhere =
+    status === "signed-in" ? isNotNull(users.lastLoginAt) : status === "not-signed-in" ? isNull(users.lastLoginAt) : status === "left" ? left : sql`true`;
+  const rows = await db
+    .select({
+      id: users.id,
+      name: users.name,
+      email: users.email,
+      jobTitle: users.jobTitle,
+      isActive: users.isActive,
+      departmentId: users.departmentId,
+      entraDepartment: users.entraDepartment,
+      lastLoginAt: users.lastLoginAt,
+      departmentName: departments.name,
+      leftDirectory: sql<boolean>`coalesce(${left}, false)`,
+    })
     .from(users)
     .leftJoin(departments, eq(users.departmentId, departments.id))
-    .where(and(peopleScope(user), like ? or(ilike(users.name, like), ilike(users.email, like)) : sql`true`))
+    .where(and(peopleScope(user), like ? or(ilike(users.name, like), ilike(users.email, like)) : sql`true`, statusWhere))
     .orderBy(asc(users.name))
     .limit(200);
+  return rows.map((r) => ({ ...r, leftDirectory: Boolean(r.leftDirectory) && !isDemoUser(r) }));
+}
+
+/** "Sync now" on Admin settings → Users. */
+export async function syncDirectoryNow(user: CurrentUser) {
+  requireAdmin(user);
+  return runDirectorySync({ trigger: "manual", triggeredBy: user.id });
 }
 
 export async function userOptions(user: CurrentUser) {

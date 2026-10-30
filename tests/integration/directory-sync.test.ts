@@ -93,3 +93,51 @@ describe("runDirectorySync", () => {
     await expect(runDirectorySync({ trigger: "manual", config: null })).rejects.toThrow(/DIRECTORY_SEARCH_GRAPH/);
   });
 });
+
+describe("Users page data and triggers", () => {
+  it("listUsers filters by sign-in and directory status", async () => {
+    const { listUsers } = await import("@/lib/services/admin");
+    const { asUser } = await import("./helpers");
+    await db.insert(users).values({ email: "it.admin@wct.my", name: "IT Admin", lastLoginAt: new Date() });
+    const [admin] = await db.select().from(users).where(eq(users.email, "it.admin@wct.my"));
+    const { roleAssignments } = await import("@/db/schema");
+    await db.insert(roleAssignments).values({ userId: admin.id, role: "SYS_ADMIN" });
+    await sync([[person("oid-1", "a@wct.my"), person("oid-2", "b@wct.my")]]);
+    await sync([[person("oid-1", "a@wct.my")]]);
+    const me = await asUser("it.admin@wct.my");
+
+    const notSignedIn = await listUsers(me, undefined, "not-signed-in");
+    expect(notSignedIn.map((u) => u.email)).toEqual(expect.arrayContaining(["a@wct.my", "b@wct.my"]));
+    expect(notSignedIn.some((u) => u.email === "it.admin@wct.my")).toBe(false);
+
+    const left = await listUsers(me, undefined, "left");
+    expect(left.map((u) => u.email)).toEqual(["b@wct.my"]);
+    expect(left[0].leftDirectory).toBe(true);
+    expect((await listUsers(me, "a@wct", "all"))[0].leftDirectory).toBe(false);
+  });
+
+  it("Sync now refuses demo admins and explains when the sync is off", async () => {
+    const { syncDirectoryNow } = await import("@/lib/services/admin");
+    const { asUser } = await import("./helpers");
+    await expect(syncDirectoryNow(await asUser("admin@demo.wct.my"))).rejects.toThrow("Demo accounts can look at settings but can't change them.");
+    await db.insert(users).values({ email: "it.admin@wct.my", name: "IT Admin" });
+    const [admin] = await db.select().from(users).where(eq(users.email, "it.admin@wct.my"));
+    const { roleAssignments } = await import("@/db/schema");
+    await db.insert(roleAssignments).values({ userId: admin.id, role: "SYS_ADMIN" });
+    vi.stubEnv("DIRECTORY_SEARCH_GRAPH", "false");
+    await expect(syncDirectoryNow(await asUser("it.admin@wct.my"))).rejects.toThrow(/sync is off/);
+    vi.unstubAllEnvs();
+  });
+
+  it("the nightly endpoint needs the cron secret", async () => {
+    vi.stubEnv("CRON_SECRET", "s3cret");
+    const { POST } = await import("@/app/api/cron/directory-sync/route");
+    const req = (auth?: string) => new Request("http://x/api/cron/directory-sync", { method: "POST", headers: auth ? { authorization: auth } : {} });
+    expect((await POST(req() as never)).status).toBe(401);
+    expect((await POST(req("Bearer wrong") as never)).status).toBe(401);
+    vi.stubEnv("DIRECTORY_SEARCH_GRAPH", "false");
+    const off = await POST(req("Bearer s3cret") as never);
+    expect(off.status).toBe(409);
+    vi.unstubAllEnvs();
+  });
+});
