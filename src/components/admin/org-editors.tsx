@@ -22,7 +22,7 @@ export function UserSelect({ users, value, onChange, id, placeholder = "Select a
   );
 }
 
-type BuValues = { id: string; code: string; name: string; isActive: boolean; requiresHrApproval: boolean };
+type BuValues = { id: string; code: string; name: string; isActive: boolean };
 
 export function BuDialog({ bu }: { bu?: BuValues }) {
   const [open, setOpen] = React.useState(false);
@@ -48,7 +48,6 @@ export function BuDialog({ bu }: { bu?: BuValues }) {
 }
 
 function BuForm({ bu, onSaved }: { bu?: BuValues; onSaved: () => void }) {
-  const [hrFinal, setHrFinal] = React.useState(bu?.requiresHrApproval ?? true);
   const [code, setCode] = React.useState(bu?.code ?? "");
   const [name, setName] = React.useState(bu?.name ?? "");
   const [active, setActive] = React.useState(bu?.isActive ?? true);
@@ -58,7 +57,7 @@ function BuForm({ bu, onSaved }: { bu?: BuValues; onSaved: () => void }) {
       className="space-y-4"
       onSubmit={async (e) => {
         e.preventDefault();
-        if (await exec(saveBusinessUnitAction({ id: bu?.id, code, name, isActive: active, requiresHrApproval: hrFinal }), "Business unit saved")) onSaved();
+        if (await exec(saveBusinessUnitAction({ id: bu?.id, code, name, isActive: active }), "Business unit saved")) onSaved();
       }}
     >
       <div className="grid gap-4 sm:grid-cols-[8rem_1fr]">
@@ -69,13 +68,6 @@ function BuForm({ bu, onSaved }: { bu?: BuValues; onSaved: () => void }) {
           <Input id="bu-name" value={name} onChange={(e) => setName(e.target.value)} required maxLength={60} />
         </Field>
       </div>
-      <label className="flex items-start gap-2 text-sm">
-        <input type="checkbox" className="mt-0.5 size-4" checked={hrFinal} onChange={(e) => setHrFinal(e.target.checked)} />
-        <span>
-          Final approval by HR Head
-          <span className="block text-xs text-muted">Off: the L&amp;D Team gives final approval and the HR Head step is skipped.</span>
-        </span>
-      </label>
       <label className="flex items-center gap-2 text-sm">
         <input type="checkbox" className="size-4" checked={active} onChange={(e) => setActive(e.target.checked)} /> Active
       </label>

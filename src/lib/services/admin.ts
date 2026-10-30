@@ -1,4 +1,5 @@
 import "server-only";
+import { routeOf } from "@/lib/workflow/route";
 import { and, asc, countDistinct, desc, eq, ilike, inArray, like as sqlLike, ne, not, or, sql, type SQL } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
@@ -51,8 +52,6 @@ const buSchema = z.object({
   code: z.string().trim().toUpperCase().regex(/^[A-Z0-9_]{2,12}$/, "Code must be 2–12 letters/numbers"),
   name: z.string().trim().min(1).max(60),
   isActive: z.boolean(),
-  /** "Final approval by HR Head". Off: L&D gives final approval (Land, Malls). */
-  requiresHrApproval: z.boolean().default(true),
 });
 
 export async function upsertBusinessUnit(user: CurrentUser, input: z.input<typeof buSchema>) {
@@ -66,10 +65,10 @@ export async function upsertBusinessUnit(user: CurrentUser, input: z.input<typeo
   const [row] = d.id
     ? await db
         .update(businessUnits)
-        .set({ code: d.code, name: d.name, isActive: d.isActive, requiresHrApproval: d.requiresHrApproval })
+        .set({ code: d.code, name: d.name, isActive: d.isActive })
         .where(eq(businessUnits.id, d.id))
         .returning()
-    : await db.insert(businessUnits).values({ code: d.code, name: d.name, isActive: d.isActive, requiresHrApproval: d.requiresHrApproval }).returning();
+    : await db.insert(businessUnits).values({ code: d.code, name: d.name, isActive: d.isActive }).returning();
   await audit(user, "business_unit", row.id, { ...d, op: d.id ? "update" : "create" });
   return row;
 }
@@ -177,6 +176,76 @@ export async function createUser(user: CurrentUser, input: { email: string; name
 }
 
 // ---------- Reads for admin pages ----------
+// ---------- Approval flow (per business unit) ----------
+export const STEP_KEYS = ["REQUESTER", "HOD", "BU", "LND", "HR"] as const;
+export type StepKey = (typeof STEP_KEYS)[number];
+
+const flowSchema = z.object({
+  requiresBuAdmin: z.boolean(),
+  requiresHrApproval: z.boolean(),
+  stepNotes: z
+    .object(Object.fromEntries(STEP_KEYS.map((k) => [k, z.string().trim().max(40, "Keep each description to 40 characters").optional()])) as Record<StepKey, z.ZodOptional<z.ZodString>>)
+    .strict(),
+});
+
+/** The description under a step: the unit's own note, or a default that follows the route. */
+export function noteFor(step: StepKey, bu: { requiresHrApproval: boolean; stepNotes: Partial<Record<StepKey, string>> }): string {
+  const own = bu.stepNotes[step]?.trim();
+  if (own) return own;
+  switch (step) {
+    case "REQUESTER":
+      return "Raises the request";
+    case "HOD":
+      return "Department head";
+    case "BU":
+      return "BU Admin review";
+    case "LND":
+      return bu.requiresHrApproval ? "Reviews" : "Reviews and gives final approval";
+    case "HR":
+      return "Final approval";
+  }
+}
+
+/** Switch a unit's optional steps (BU Admin, HR Head) and set step descriptions. Applies to the next approval. */
+export async function updateBusinessUnitFlow(user: CurrentUser, buId: string, input: z.input<typeof flowSchema>) {
+  requireAdmin(user);
+  const id = UUID.parse(buId);
+  const d = flowSchema.parse(input);
+  const stepNotes = Object.fromEntries(Object.entries(d.stepNotes).filter(([, v]) => v)) as Partial<Record<StepKey, string>>;
+  const [row] = await db
+    .update(businessUnits)
+    .set({ requiresBuAdmin: d.requiresBuAdmin, requiresHrApproval: d.requiresHrApproval, stepNotes })
+    .where(eq(businessUnits.id, id))
+    .returning();
+  if (!row) throw new ServiceError("That business unit no longer exists.", 404);
+  await audit(user, "business_unit_flow", row.id, { requiresBuAdmin: d.requiresBuAdmin, requiresHrApproval: d.requiresHrApproval, stepNotes });
+  return row;
+}
+
+/** Each active unit's approval flow for the Approval flow tab. */
+export async function flowOverview(user: CurrentUser) {
+  requireAdminRead(user);
+  const [bus, admins] = await Promise.all([
+    db.select().from(businessUnits).where(eq(businessUnits.isActive, true)).orderBy(asc(businessUnits.name)),
+    db
+      .select({ businessUnitId: businessUnitAdmins.businessUnitId, name: users.name })
+      .from(businessUnitAdmins)
+      .innerJoin(users, and(eq(businessUnitAdmins.userId, users.id), eq(users.isActive, true), peopleScope(user)))
+      .orderBy(asc(users.name)),
+  ]);
+  return bus.map((bu) => ({
+    id: bu.id,
+    code: bu.code,
+    name: bu.name,
+    requiresBuAdmin: bu.requiresBuAdmin,
+    requiresHrApproval: bu.requiresHrApproval,
+    route: routeOf(bu),
+    buAdmins: admins.filter((a) => a.businessUnitId === bu.id).map((a) => a.name),
+    stepNotes: bu.stepNotes,
+    notes: Object.fromEntries(STEP_KEYS.map((k) => [k, noteFor(k, bu)])) as Record<StepKey, string>,
+  }));
+}
+
 export async function adminOverview(user: CurrentUser) {
   requireAdminRead(user);
   const people = peopleScope(user);

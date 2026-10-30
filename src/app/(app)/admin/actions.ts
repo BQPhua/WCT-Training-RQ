@@ -3,7 +3,7 @@ import { revalidatePath } from "next/cache";
 import { requireApiUser } from "@/lib/auth/current-user";
 import { isDemoUser, isSystemAdmin } from "@/lib/auth/roles";
 import { toActionError, type ActionResult } from "@/lib/action-result";
-import { assignRole, createUser, revokeRole, setBusinessUnitAdmins, updateUser, upsertBusinessUnit, upsertDepartment } from "@/lib/services/admin";
+import { assignRole, createUser, revokeRole, setBusinessUnitAdmins, updateBusinessUnitFlow, updateUser, upsertBusinessUnit, upsertDepartment, type StepKey } from "@/lib/services/admin";
 import { deliver } from "@/lib/notify/send";
 import type { RoleName } from "@/lib/workflow";
 
@@ -17,7 +17,7 @@ async function run(fn: () => Promise<unknown>): Promise<ActionResult> {
   }
 }
 
-export async function saveBusinessUnitAction(input: { id?: string; code: string; name: string; isActive: boolean; requiresHrApproval: boolean }) {
+export async function saveBusinessUnitAction(input: { id?: string; code: string; name: string; isActive: boolean }) {
   return run(async () => upsertBusinessUnit(await requireApiUser(), input));
 }
 export async function saveBuAdminsAction(buId: string, userIds: string[]) {
@@ -44,4 +44,11 @@ export async function retryNotificationAction(logId: string) {
     if (!isSystemAdmin(user) || isDemoUser(user)) throw new Error("forbidden");
     await deliver(logId);
   });
+}
+
+export async function saveBusinessUnitFlowAction(
+  buId: string,
+  input: { requiresBuAdmin: boolean; requiresHrApproval: boolean; stepNotes: Partial<Record<StepKey, string>> },
+) {
+  return run(async () => updateBusinessUnitFlow(await requireApiUser(), buId, input));
 }

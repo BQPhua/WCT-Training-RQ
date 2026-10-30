@@ -6,11 +6,13 @@ test("the business unit dialog forgets unsaved changes when closed", async ({ br
   await page.goto("admin/organisation");
   const edit = page.getByRole("button", { name: "Edit E&C" });
   await edit.click();
-  const hrFinal = page.getByRole("dialog").getByRole("checkbox", { name: /Final approval by HR Head/ });
-  await expect(hrFinal).toBeChecked();
-  await hrFinal.uncheck();
+  const name = page.getByRole("dialog").getByLabel("Name");
+  await expect(name).toHaveValue("E&C");
+  await name.fill("Something else");
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await edit.click();
-  await expect(page.getByRole("dialog").getByRole("checkbox", { name: /Final approval by HR Head/ })).toBeChecked();
+  await expect(page.getByRole("dialog").getByLabel("Name")).toHaveValue("E&C");
+  // The route switches live on the Approval flow tab, not in this dialog.
+  await expect(page.getByRole("dialog").getByRole("checkbox", { name: /Final approval by HR Head/ })).toHaveCount(0);
 });

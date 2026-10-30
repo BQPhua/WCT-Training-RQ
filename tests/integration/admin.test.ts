@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
-import { adminAuditLogs, departments, roleAssignments, users } from "@/db/schema";
+import { adminAuditLogs, businessUnits, departments, roleAssignments, users } from "@/db/schema";
 import { seed } from "@/db/seed";
-import { adminOverview, assignRole, listUsers, revokeRole, setBusinessUnitAdmins, updateUser, upsertBusinessUnit, upsertDepartment, userOptions } from "@/lib/services/admin";
+import { adminOverview, assignRole, flowOverview, updateBusinessUnitFlow, listUsers, revokeRole, setBusinessUnitAdmins, updateUser, upsertBusinessUnit, upsertDepartment, userOptions } from "@/lib/services/admin";
 import { asUser } from "./helpers";
 import { resetDb } from "./setup";
 
@@ -63,12 +63,45 @@ describe("admin services", () => {
     await expect(updateUser(a, lnd.id, { isActive: false })).rejects.toThrow(/last system admin/i);
   });
 
-  it("upsertBusinessUnit stores requiresHrApproval (default true)", async () => {
+  it("editing a unit's name or code never changes its approval route", async () => {
     const lnd = await realLnd();
-    const created = await upsertBusinessUnit(lnd, { code: "HOSP", name: "Hospitality", isActive: true });
-    expect(created.requiresHrApproval).toBe(true);
-    const updated = await upsertBusinessUnit(lnd, { id: created.id, code: "HOSP", name: "Hospitality", isActive: true, requiresHrApproval: false });
-    expect(updated.requiresHrApproval).toBe(false);
+    const [land] = await db.select().from(businessUnits).where(eq(businessUnits.code, "LAND"));
+    expect(land.requiresHrApproval).toBe(false);
+    const renamed = await upsertBusinessUnit(lnd, { id: land.id, code: "LAND", name: "Land & Property", isActive: true });
+    expect(renamed.requiresHrApproval).toBe(false);
+    expect(renamed.requiresBuAdmin).toBe(true);
+  });
+
+  it("updateBusinessUnitFlow saves the switches and notes and is audit-logged", async () => {
+    const lnd = await realLnd();
+    const [land] = await db.select().from(businessUnits).where(eq(businessUnits.code, "LAND"));
+    const saved = await updateBusinessUnitFlow(lnd, land.id, { requiresBuAdmin: false, requiresHrApproval: true, stepNotes: { HOD: "Head of department" } });
+    expect(saved.requiresBuAdmin).toBe(false);
+    expect(saved.requiresHrApproval).toBe(true);
+    expect(saved.stepNotes).toEqual({ HOD: "Head of department" });
+    const logs = await db.select().from(adminAuditLogs).where(eq(adminAuditLogs.entityId, land.id));
+    expect(logs.some((l) => l.entity === "business_unit_flow")).toBe(true);
+  });
+
+  it("updateBusinessUnitFlow refuses demo admins, notes over 40 characters and unknown steps", async () => {
+    const [land] = await db.select().from(businessUnits).where(eq(businessUnits.code, "LAND"));
+    await expect(updateBusinessUnitFlow(await asUser("admin@demo.wct.my"), land.id, { requiresBuAdmin: true, requiresHrApproval: true, stepNotes: {} })).rejects.toThrow(
+      "Demo accounts can look at settings but can't change them.",
+    );
+    const lnd = await realLnd();
+    await expect(updateBusinessUnitFlow(lnd, land.id, { requiresBuAdmin: true, requiresHrApproval: true, stepNotes: { HOD: "x".repeat(41) } })).rejects.toThrow();
+    await expect(
+      updateBusinessUnitFlow(lnd, land.id, { requiresBuAdmin: true, requiresHrApproval: true, stepNotes: { CEO: "nope" } as never }),
+    ).rejects.toThrow();
+  });
+
+  it("flowOverview gives each unit's route, BU Admin names and resolved notes", async () => {
+    const units = await flowOverview(await asUser("lnd1@demo.wct.my"));
+    const land = units.find((u) => u.code === "LAND")!;
+    expect(land.route).toEqual(["HOD", "BU", "LND"]);
+    expect(land.buAdmins).toEqual(["Lee Mei Ling"]);
+    expect(land.notes.LND).toBe("Reviews and gives final approval");
+    expect(units.find((u) => u.code === "ENC")!.notes.LND).toBe("Reviews");
   });
 
   it("gives the L&D team full admin access", async () => {

@@ -47,6 +47,7 @@ test("the L&D team reaches Admin settings, read-only for demo accounts, with Hea
   const lnd = await signInAs(browser, "lnd1@demo.wct.my");
   await lnd.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Admin settings" }).click();
   await expect(lnd.getByRole("note")).toContainText("changes are turned off");
+  await lnd.getByRole("navigation", { name: "Admin sections" }).getByRole("link", { name: "Business units & departments" }).click();
   await expect(lnd.getByText("Head of Departments")).toBeVisible();
   await expect(lnd.getByRole("navigation", { name: "Admin sections" }).getByRole("link", { name: "Audit log" })).toHaveCount(0);
 });

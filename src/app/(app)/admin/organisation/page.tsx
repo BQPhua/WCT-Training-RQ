@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { CircleAlert } from "lucide-react";
 import { BuAdminsEditor, BuDialog, DeptDialog } from "@/components/admin/org-editors";
 import { Panel, PanelHeader } from "@/components/ui/panel";
@@ -17,13 +18,13 @@ export default async function OrganisationPage() {
           {o.bus.map((b) => (
             <li key={b.id} className="grid gap-3 px-5 py-4 md:grid-cols-[14rem_1fr] md:items-start">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded bg-shell px-1.5 py-0.5 text-[11px] font-semibold text-shell-fg">{b.code}</span>
+                <span className="rounded bg-ink px-1.5 py-0.5 text-[11px] font-semibold text-surface">{b.code}</span>
                 <span className="font-medium">{b.name}</span>
                 {!b.isActive && <span className="text-xs text-muted">(inactive)</span>}
                 <BuDialog bu={b} />
-                <span className="basis-full text-xs text-muted">
-                  Final approval: <span className="font-medium text-ink-2">{b.requiresHrApproval ? "HR Head" : "L&D Team"}</span>
-                </span>
+                <Link href="/admin/flow" className="basis-full text-xs text-muted underline-offset-4 hover:text-info-text hover:underline">
+                  Final approval: <span className="font-medium text-ink-2">{b.requiresHrApproval ? "HR Head" : "L&D Team"}</span> · change in Approval flow
+                </Link>
               </div>
               <BuAdminsEditor buId={b.id} users={users} current={o.buAdmins.filter((a) => a.businessUnitId === b.id).map((a) => ({ id: a.userId, name: a.name, email: "" }))} />
             </li>

@@ -6,6 +6,7 @@ import { SPRING } from "@/components/motion/fade-rise";
 import { cn } from "@/lib/utils";
 
 const TABS = [
+  ["/admin/flow", "Approval flow"],
   ["/admin/organisation", "Business units & departments"],
   ["/admin/roles", "Roles"],
   ["/admin/users", "Users"],
