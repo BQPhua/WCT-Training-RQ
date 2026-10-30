@@ -1,13 +1,14 @@
 "use client";
 import * as React from "react";
 import Link from "next/link";
-import { Eye, LogOut, Menu as MenuIcon, Monitor, Moon, Plus, Sun } from "lucide-react";
+import { ChevronsLeft, ChevronsRight, Eye, LogOut, Menu as MenuIcon, Monitor, Moon, Plus, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogTrigger, SheetContent } from "@/components/ui/dialog";
 import { Menu, MenuContent, MenuItem, MenuLabel, MenuSeparator, MenuTrigger } from "@/components/ui/menu";
 import { Avatar } from "@/components/ui/misc";
 import { BASE_PATH } from "@/lib/env";
+import { cn } from "@/lib/utils";
 import { Nav, type NavProps } from "./nav";
 import { DemoBanner, ViewAsBanner, ViewAsDialog, type DemoAccount } from "./view-as";
 import { Wordmark } from "./wordmark";
@@ -26,7 +27,7 @@ export interface ShellUser {
   demoSession?: { roleLabel: string } | null;
 }
 
-function UserMenu({ user }: { user: ShellUser }) {
+function UserMenu({ user, collapsed = false }: { user: ShellUser; collapsed?: boolean }) {
   const { setTheme, theme } = useTheme();
   // Kept outside the menu: the menu unmounts its items as soon as one is
   // selected, which would cancel a submit button placed inside it.
@@ -37,9 +38,15 @@ function UserMenu({ user }: { user: ShellUser }) {
     <form ref={signOutForm} action={`${BASE_PATH}/api/auth/logout`} method="post" hidden />
     {user.demoAccounts && <ViewAsDialog open={viewAsOpen} onOpenChange={setViewAsOpen} accounts={user.demoAccounts} />}
     <Menu>
-      <MenuTrigger className="flex w-full cursor-pointer items-center gap-3 rounded-lg p-2 text-left outline-none transition-colors hover:bg-white/[0.06] focus-visible:ring-2 focus-visible:ring-shell-fg">
+      <MenuTrigger
+        aria-label={collapsed ? `${user.name} (account menu)` : undefined}
+        className={cn(
+          "flex w-full cursor-pointer items-center gap-3 rounded-lg p-2 text-left outline-none transition-colors hover:bg-white/[0.06] focus-visible:ring-2 focus-visible:ring-shell-fg",
+          collapsed && "justify-center",
+        )}
+      >
         <Avatar name={user.name} />
-        <span className="min-w-0 flex-1">
+        <span className={cn("min-w-0 flex-1", collapsed && "sr-only")}>
           <span className="block truncate text-sm font-medium text-shell-fg">{user.name}</span>
           <span className="block truncate text-xs text-shell-muted">{user.department ?? user.email}</span>
         </span>
@@ -80,32 +87,86 @@ function UserMenu({ user }: { user: ShellUser }) {
   );
 }
 
-function SidebarBody({ user, nav, onNavigate, instance }: { user: ShellUser; nav: NavProps; onNavigate?: () => void; instance: string }) {
+function SidebarBody({
+  user,
+  nav,
+  onNavigate,
+  instance,
+  collapsed = false,
+  onToggle,
+}: {
+  user: ShellUser;
+  nav: NavProps;
+  onNavigate?: () => void;
+  instance: string;
+  collapsed?: boolean;
+  /** Desktop rail only: collapse or expand. */
+  onToggle?: () => void;
+}) {
   return (
     <div data-shell className="flex h-full flex-col bg-gradient-to-b from-shell via-shell to-shell-dusk">
-      <div className="px-4 pb-6 pt-5">
-        <Link href="/dashboard" onClick={onNavigate} className="inline-block rounded-md outline-none focus-visible:ring-2 focus-visible:ring-shell-fg">
-          <Wordmark />
+      <div className={cn("pb-6 pt-5", collapsed ? "flex justify-center px-2" : "px-4")}>
+        <Link href="/dashboard" onClick={onNavigate} aria-label={collapsed ? "Training RQ dashboard" : undefined} className="inline-block rounded-md outline-none focus-visible:ring-2 focus-visible:ring-shell-fg">
+          <Wordmark compact={collapsed} />
         </Link>
       </div>
-      <div className="flex-1 overflow-y-auto px-3">
-        <Nav {...nav} onNavigate={onNavigate} instance={instance} />
+      <div className={cn("flex-1 overflow-y-auto overflow-x-hidden", collapsed ? "px-2.5" : "px-3")}>
+        <Nav {...nav} onNavigate={onNavigate} instance={instance} collapsed={collapsed} />
       </div>
+      {onToggle && (
+        <div className={cn("px-3 pb-2", collapsed && "flex justify-center px-2.5")}>
+          <button
+            type="button"
+            onClick={onToggle}
+            aria-expanded={!collapsed}
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            className={cn(
+              "flex h-9 cursor-pointer items-center gap-2 rounded-lg text-[13px] text-shell-muted transition-colors hover:bg-white/[0.06] hover:text-shell-fg focus-visible:outline-2 focus-visible:outline-shell-fg",
+              collapsed ? "w-full justify-center" : "w-full px-3",
+            )}
+          >
+            {collapsed ? <ChevronsRight className="size-4" aria-hidden /> : <ChevronsLeft className="size-4" aria-hidden />}
+            {!collapsed && <span>Collapse sidebar</span>}
+          </button>
+        </div>
+      )}
       <div className="border-t border-white/10 p-3">
-        <UserMenu user={user} />
+        <UserMenu user={user} collapsed={collapsed} />
       </div>
     </div>
   );
 }
 
-export function AppShell({ user, nav, children }: { user: ShellUser; nav: NavProps; children: React.ReactNode }) {
+export function AppShell({
+  user,
+  nav,
+  initialCollapsed = false,
+  children,
+}: {
+  user: ShellUser;
+  nav: NavProps;
+  /** From the trq_sidebar cookie, so the first paint is already right. */
+  initialCollapsed?: boolean;
+  children: React.ReactNode;
+}) {
   const [open, setOpen] = React.useState(false);
+  const [collapsed, setCollapsed] = React.useState(initialCollapsed);
+  const toggle = () => {
+    const next = !collapsed;
+    setCollapsed(next);
+    document.cookie = `trq_sidebar=${next ? "collapsed" : "expanded"}; path=${BASE_PATH}; max-age=31536000; samesite=lax`;
+  };
   return (
-    <div className="min-h-dvh lg:pl-64">
+    <div className={cn("min-h-dvh transition-[padding] duration-200 ease-out", collapsed ? "lg:pl-[72px]" : "lg:pl-64")}>
       {user.viewedAs && <ViewAsBanner name={user.viewedAs.name} roleLabel={user.viewedAs.roleLabel} />}
       {!user.viewedAs && user.demoSession && <DemoBanner name={user.name} roleLabel={user.demoSession.roleLabel} />}
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 bg-shell shadow-[inset_-1px_0_0_oklch(1_0_0/0.06)] lg:block">
-        <SidebarBody user={user} nav={nav} instance="rail" />
+      <aside
+        className={cn(
+          "fixed inset-y-0 left-0 z-30 hidden overflow-hidden bg-shell shadow-[inset_-1px_0_0_oklch(1_0_0/0.06)] transition-[width] duration-200 ease-out lg:block",
+          collapsed ? "w-[72px]" : "w-64",
+        )}
+      >
+        <SidebarBody user={user} nav={nav} instance="rail" collapsed={collapsed} onToggle={toggle} />
       </aside>
 
       <header className="sticky top-0 z-20 flex h-14 items-center gap-3 bg-gradient-to-r from-shell to-shell-dusk px-4 shadow-md lg:hidden">

@@ -60,9 +60,9 @@ export function Tip({ content, children, side = "top" }: { content: React.ReactN
       <T.Root>
         <T.Trigger asChild>{children}</T.Trigger>
         <T.Portal>
-          <T.Content side={side} sideOffset={6} className="z-50 max-w-64 rounded-md bg-shell px-2.5 py-1.5 text-xs text-shell-fg shadow-md data-[state=delayed-open]:animate-rise">
+          <T.Content side={side} sideOffset={6} className="z-50 max-w-64 rounded-md bg-shell px-2.5 py-1.5 text-xs text-shell-fg shadow-md data-[state=delayed-open]:animate-rise dark:bg-surface-2 dark:text-ink dark:ring-1 dark:ring-line-strong">
             {content}
-            <T.Arrow className="fill-shell" />
+            <T.Arrow className="fill-shell dark:fill-surface-2" />
           </T.Content>
         </T.Portal>
       </T.Root>

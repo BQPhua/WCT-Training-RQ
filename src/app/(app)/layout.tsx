@@ -1,3 +1,4 @@
+import { cookies } from "next/headers";
 import { AppShell } from "@/components/shell/app-shell";
 import { requireUser } from "@/lib/auth/current-user";
 import { isDemoUser, isSystemAdmin } from "@/lib/auth/roles";
@@ -31,6 +32,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         demoSession: !user.viewedBy && demo ? { roleLabel: roleLabelOf(user) } : null,
       }}
       nav={{ approvals, isAdmin: isSystemAdmin(user) }}
+      initialCollapsed={(await cookies()).get("trq_sidebar")?.value === "collapsed"}
     >
       {children}
     </AppShell>
