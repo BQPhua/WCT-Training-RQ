@@ -9,6 +9,8 @@ import { Dialog, DialogClose, DialogContent } from "@/components/ui/dialog";
 import { Field, Input, NativeSelect, Textarea } from "@/components/ui/field";
 import { Panel } from "@/components/ui/panel";
 import { cn } from "@/lib/utils";
+import type { ApprovalStage } from "@/lib/workflow/route";
+import { routePanelRows } from "./route-panel";
 import { BASE_PATH } from "@/lib/env";
 import { formatDateRange, formatMYR, formatTime12, totalFees } from "@/lib/format";
 import { requestFormSchema, type DraftInput } from "@/lib/validation/request";
@@ -39,7 +41,7 @@ export interface RequestFormProps {
   initialParticipantCount: number | null;
   initialNameList: AttachmentItem | null;
   initialAttachments: AttachmentItem[];
-  requester: { name: string; department: string | null; businessUnit: string | null; hodName: string | null; buAdminNames: string | null; requiresHrApproval: boolean };
+  requester: { name: string; department: string | null; businessUnit: string | null; hodName: string | null; buAdminNames: string | null; route: ApprovalStage[] };
   departments: { id: string; name: string; buName: string }[];
 }
 
@@ -232,6 +234,8 @@ export function RequestForm(props: RequestFormProps) {
 
   const participants = mode === "list" ? Number.parseInt(participantCount, 10) || 0 : candidates.filter((c) => c.trim()).length;
   const total = totalFees(v.feePerPax, participants);
+  /** The unit's route has a BU Admin step but nobody holds it, so submitting would be refused. */
+  const needsBuAdmin = props.requester.route.includes("BU") && !props.requester.buAdminNames;
 
   return (
     <form
@@ -444,22 +448,12 @@ export function RequestForm(props: RequestFormProps) {
           <div className="space-y-4 px-5 py-5">
             <h2 className="text-[15px] font-semibold">Approval route</h2>
             <ol className="relative space-y-4 before:absolute before:bottom-2 before:left-[7px] before:top-2 before:w-px before:bg-line-strong">
-              {[
-                ["You submit", props.requester.name],
-                ["Department HOD", props.requester.hodName ?? "Not assigned — contact HR"],
-                [props.requester.businessUnit ? `${props.requester.businessUnit} BU Admin` : "BU Admin", props.requester.buAdminNames ?? "Not assigned — contact HR"],
-                ...(props.requester.requiresHrApproval
-                  ? [
-                      ["L&D Team", "Any L&D member reviews"],
-                      ["HR Head", "Final approval"],
-                    ]
-                  : [["L&D Team", "Reviews and gives final approval"]]),
-              ].map(([stage, who], i) => (
-                <li key={stage} className="relative flex gap-3 pl-0">
+              {routePanelRows(props.requester).map((row, i) => (
+                <li key={row.stage} className="relative flex gap-3 pl-0">
                   <span className={cn("relative z-10 mt-1 size-[15px] shrink-0 rounded-full border-2 bg-surface", i === 0 ? "border-brand" : "border-line-strong")} />
                   <span>
-                    <span className="block text-sm font-medium text-ink">{stage}</span>
-                    <span className={cn("block text-[13px]", (i === 1 && !props.requester.hodName) || (i === 2 && !props.requester.buAdminNames) ? "text-danger" : "text-muted")}>{who}</span>
+                    <span className="block text-sm font-medium text-ink">{row.stage}</span>
+                    <span className={cn("block text-[13px]", row.missing ? "text-danger" : "text-muted")}>{row.who}</span>
                   </span>
                 </li>
               ))}
@@ -535,7 +529,7 @@ export function RequestForm(props: RequestFormProps) {
               <CircleAlert className="mt-0.5 size-4 shrink-0" /> Your department has no HOD assigned, so this can&apos;t be submitted yet. Please contact HR.
             </p>
           )}
-          {props.requester.hodName && !props.requester.buAdminNames && (
+          {props.requester.hodName && needsBuAdmin && (
             <p className="mt-3 flex gap-2 rounded-lg bg-danger-soft px-3 py-2 text-[13px] text-danger">
               <CircleAlert className="mt-0.5 size-4 shrink-0" /> Your business unit has no BU Admin assigned, so this can&apos;t be submitted yet. Please contact HR.
             </p>
@@ -546,7 +540,7 @@ export function RequestForm(props: RequestFormProps) {
                 Keep editing
               </Button>
             </DialogClose>
-            <Button type="button" variant="brand" onClick={submit} disabled={submitting || !props.requester.hodName || !props.requester.buAdminNames}>
+            <Button type="button" variant="brand" onClick={submit} disabled={submitting || !props.requester.hodName || needsBuAdmin}>
               {submitting ? <Loader2 className="animate-spin" /> : <ArrowRight />} {props.isReturned ? "Resubmit" : "Submit to HOD"}
             </Button>
           </div>
