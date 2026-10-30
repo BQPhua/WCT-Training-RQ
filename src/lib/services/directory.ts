@@ -9,11 +9,7 @@ export interface DirectoryResult {
   people: DirectoryPerson[];
   source: "graph" | "local";
 }
-interface GraphConfig {
-  tenantId: string;
-  clientId: string;
-  clientSecret: string;
-}
+import { getGraphToken, type GraphConfig } from "./graph";
 type GraphUser = { id: string; displayName?: string; mail?: string | null; jobTitle?: string | null; department?: string | null };
 
 /**
@@ -29,20 +25,7 @@ export function createDirectory(opts: {
 
   async function getToken(cfg: GraphConfig): Promise<string> {
     if (token && token.expiresAt - 60_000 > Date.now()) return token.value;
-    const res = await fetch(`https://login.microsoftonline.com/${cfg.tenantId}/oauth2/v2.0/token`, {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        client_id: cfg.clientId,
-        client_secret: cfg.clientSecret,
-        scope: "https://graph.microsoft.com/.default",
-        grant_type: "client_credentials",
-      }),
-      signal: AbortSignal.timeout(8000),
-    });
-    if (!res.ok) throw new Error(`Graph token HTTP ${res.status}`);
-    const json = (await res.json()) as { access_token: string; expires_in: number };
-    token = { value: json.access_token, expiresAt: Date.now() + json.expires_in * 1000 };
+    token = await getGraphToken(cfg);
     return token.value;
   }
 

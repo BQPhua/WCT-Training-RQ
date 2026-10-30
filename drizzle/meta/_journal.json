@@ -29,6 +29,13 @@
       "when": 1793321370768,
       "tag": "0003_bu_flow",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793322007464,
+      "tag": "0004_directory_sync",
+      "breakpoints": true
     }
   ]
 }
