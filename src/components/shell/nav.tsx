@@ -18,7 +18,7 @@ export interface NavProps {
 }
 
 export function Nav({ approvals, isAdmin, onNavigate, instance = "rail", collapsed = false }: NavProps) {
-  const pathname = usePathname();
+  const pathname = usePathname() ?? "";
   const items = [
     { href: "/dashboard", label: "Dashboard", icon: LayoutGrid },
     { href: "/requests/new", label: "New Training Requisition", icon: FilePlus2 },
