@@ -45,8 +45,14 @@ export function resolveRecipients(event: WorkflowEvent, p: Parties): { to: Perso
       cc = [p.requester];
       break;
     case "HOD_APPROVED":
-      to = p.buAdmins;
-      cc = [p.requester];
+      // With the unit's BU Admin step off, the request goes straight to L&D; BU Admins stay informed.
+      if (event.toStatus === "PENDING_LND") {
+        to = p.lnd;
+        cc = [p.requester, ...p.buAdmins];
+      } else {
+        to = p.buAdmins;
+        cc = [p.requester];
+      }
       break;
     case "BU_APPROVED":
       to = p.lnd;

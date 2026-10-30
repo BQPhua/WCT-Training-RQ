@@ -107,6 +107,28 @@ describe("route per business unit", () => {
     expect((await act("lnd1@demo.wct.my", id, { type: "APPROVE" })).status).toBe("PENDING_HR");
   });
 
+  it("Land request with BU step off goes HOD → L&D", async () => {
+    await db.update(businessUnits).set({ requiresBuAdmin: false }).where(eq(businessUnits.code, "LAND"));
+    const id = await submitted("requester@demo.wct.my");
+    expect((await act("hod.land@demo.wct.my", id, { type: "APPROVE" })).status).toBe("PENDING_LND");
+    expect((await act("lnd1@demo.wct.my", id, { type: "APPROVE" })).status).toBe("APPROVED");
+  });
+
+  it("submit works when the unit has no BU Admin and the BU step is off", async () => {
+    const [land] = await db.select().from(businessUnits).where(eq(businessUnits.code, "LAND"));
+    await db.delete(businessUnitAdmins).where(eq(businessUnitAdmins.businessUnitId, land.id));
+    await db.update(businessUnits).set({ requiresBuAdmin: false }).where(eq(businessUnits.id, land.id));
+    const id = await submitted("requester@demo.wct.my");
+    expect((await statusOf(id)).s).toBe("PENDING_HOD");
+  });
+
+  it("In-flight PENDING_BU request can still be approved after the BU step is switched off", async () => {
+    const id = await submitted("requester@demo.wct.my");
+    await act("hod.land@demo.wct.my", id, { type: "APPROVE" });
+    await db.update(businessUnits).set({ requiresBuAdmin: false }).where(eq(businessUnits.code, "LAND"));
+    expect((await act("buadmin.land@demo.wct.my", id, { type: "APPROVE" })).status).toBe("PENDING_LND");
+  });
+
   it("In-flight PENDING_HR Malls request can be approved by HR Head", async () => {
     await setHrFlag("MALLS", true);
     const id = await submitted("requester.malls@demo.wct.my");

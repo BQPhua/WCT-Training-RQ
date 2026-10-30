@@ -1,4 +1,5 @@
 import { holdsStage, stageOf } from "./permissions";
+import { nextStatusAfter } from "./route";
 import {
   WorkflowError,
   type ActionInput,
@@ -14,11 +15,12 @@ import {
 const PENDING: Status[] = ["PENDING_HOD", "PENDING_BU", "PENDING_LND", "PENDING_HR"];
 const CANCELLABLE: Status[] = ["DRAFT", ...PENDING, "RETURNED"];
 
-const APPROVE_NEXT: Partial<Record<Status, { to: Status; kind: WorkflowEventKind }>> = {
-  PENDING_HOD: { to: "PENDING_BU", kind: "HOD_APPROVED" },
-  PENDING_BU: { to: "PENDING_LND", kind: "BU_APPROVED" },
-  PENDING_LND: { to: "PENDING_HR", kind: "LND_APPROVED" },
-  PENDING_HR: { to: "APPROVED", kind: "FINAL_APPROVED" },
+/** The event raised by an approval at each stage; the final approval is always FINAL_APPROVED. */
+const APPROVE_KIND: Partial<Record<Status, WorkflowEventKind>> = {
+  PENDING_HOD: "HOD_APPROVED",
+  PENDING_BU: "BU_APPROVED",
+  PENDING_LND: "LND_APPROVED",
+  PENDING_HR: "FINAL_APPROVED",
 };
 
 /**
@@ -83,14 +85,12 @@ export function transition(
     }
 
     case "APPROVE": {
-      const next =
-        from === "PENDING_LND" && req.requiresHrApproval === false
-          ? { to: "APPROVED" as const, kind: "FINAL_APPROVED" as const }
-          : APPROVE_NEXT[from];
-      if (!next) throw new WorkflowError("INVALID_STATE");
+      const kind = APPROVE_KIND[from];
+      if (!kind) throw new WorkflowError("INVALID_STATE");
       const check = approverCheck(req, actor, counts);
       if (!check.ok) throw new WorkflowError("FORBIDDEN");
-      return { toStatus: next.to, selfApproved: check.selfApproved, event: { ...base, kind: next.kind } };
+      const to = nextStatusAfter(from, req);
+      return { toStatus: to, selfApproved: check.selfApproved, event: { ...base, kind: to === "APPROVED" ? "FINAL_APPROVED" : kind, toStatus: to } };
     }
 
     case "REJECT": {

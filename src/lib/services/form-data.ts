@@ -6,6 +6,7 @@ import { db } from "@/db";
 import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { buAdminNames, worldOf } from "./parties";
+import { routeOf } from "@/lib/workflow/route";
 
 /** Data the request form needs about the signed-in requester. */
 export async function requesterContext(user: CurrentUser) {
@@ -24,8 +25,8 @@ export async function requesterContext(user: CurrentUser) {
       businessUnit: user.businessUnit?.name ?? null,
       hodName,
       buAdminNames: names,
-      /** Land and Malls end at L&D; E&C (or no unit) goes on to HR Head. */
-      requiresHrApproval: user.businessUnit?.requiresHrApproval ?? true,
+      /** The requester's unit route (e.g. Land: HOD → BU → L&D; E&C adds HR Head). */
+      route: routeOf({ requiresBuAdmin: user.businessUnit?.requiresBuAdmin, requiresHrApproval: user.businessUnit?.requiresHrApproval }),
     },
     departments: depts.map((d) => ({ id: d.id, name: d.name, buName: d.buName })),
   };

@@ -45,7 +45,9 @@ function headline(e: WorkflowEvent, actor: string, bu: string | null | undefined
     case "RESUBMITTED":
       return `${actor} has submitted a training request for your approval.`;
     case "HOD_APPROVED":
-      return `The Department HOD (${actor}) has approved this training request. It is now with the ${buAdmin} for approval.`;
+      return e.toStatus === "PENDING_LND"
+        ? `The Department HOD (${actor}) has approved this training request. It is now with the L&D Team for review.`
+        : `The Department HOD (${actor}) has approved this training request. It is now with the ${buAdmin} for approval.`;
     case "BU_APPROVED":
       return `The ${buAdmin} (${actor}) has approved this training request. It is now with the L&D Team for review.`;
     case "LND_APPROVED":

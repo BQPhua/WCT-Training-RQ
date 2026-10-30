@@ -34,6 +34,8 @@ export interface RequestRef {
    * Only consulted when L&D approves. Missing means true (E&C, or no unit).
    */
   requiresHrApproval?: boolean;
+  /** Does the unit's route include the BU Admin step? Missing means true. */
+  requiresBuAdmin?: boolean;
 }
 
 /** Number of active holders of each pooled role (for the self-approval rule). */
@@ -68,6 +70,8 @@ export interface WorkflowEvent {
   kind: WorkflowEventKind;
   /** Status the request was in when the event happened. */
   fromStatus: Status;
+  /** Status the request moved to (set on approvals, so recipients know who is next). */
+  toStatus?: Status;
   actorId: string;
   /** For REJECTED: the stage that rejected. */
   byStage?: Stage;

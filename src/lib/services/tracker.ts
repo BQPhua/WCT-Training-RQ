@@ -1,4 +1,5 @@
 import type { TrackerStation } from "@/components/request-detail/progress-tracker";
+import { routeOf } from "@/lib/workflow/route";
 import type { RequestDetail } from "./requests";
 
 /** Derive tracker stations from the request's status and its audit trail. */
@@ -33,21 +34,21 @@ export function buildStations(d: RequestDetail, holders: { hod: string | null; b
         ? { key: "final", label: "Cancelled", state: "cancelled", when: d.request.finalisedAt }
         : { key: "final", label: "Approved", state: "upcoming" };
 
-  // Land and Malls end at L&D. Keep the HR Head station when the unit needs it, or when this
-  // request is actually with (or was approved by) HR Head, e.g. one in flight when the rule changed.
-  const hrApprovedThisRound = acts.some(
-    (a) => a.action === "APPROVE" && a.fromStatus === "PENDING_HR" && a.createdAt >= (submitted?.createdAt ?? new Date(0)),
+  // Which approval stations to draw. A finished request shows the route it actually took
+  // (the stages approved this round); an open one shows its unit's route, plus the stage it is
+  // at and any it has passed (so an in-flight request at a step since switched off is not hidden).
+  const since = submitted?.createdAt ?? new Date(0);
+  const approvedThisRound = new Set(acts.filter((a) => a.action === "APPROVE" && a.createdAt >= since).map((a) => a.fromStatus));
+  const STAGES = [
+    { key: "hod", label: "Department HOD", status: "PENDING_HOD", stage: "HOD", holder: holders.hod },
+    { key: "bu", label: "BU Admin", status: "PENDING_BU", stage: "BU", holder: holders.bu ?? "BU Admin" },
+    { key: "lnd", label: "L&D review", status: "PENDING_LND", stage: "LND", holder: "L&D Team" },
+    { key: "hr", label: "HR Head", status: "PENDING_HR", stage: "HR", holder: holders.hr },
+  ] as const;
+  const route = new Set<string>(routeOf({ requiresBuAdmin: d.businessUnit?.requiresBuAdmin, requiresHrApproval: d.businessUnit?.requiresHrApproval }));
+  const shown = STAGES.filter((st) =>
+    s === "APPROVED" ? approvedThisRound.has(st.status) : route.has(st.stage) || s === st.status || approvedThisRound.has(st.status),
   );
-  // A finished request keeps the route it took (from its actions); an open one predicts from the unit's setting.
-  const showHr =
-    s === "APPROVED" ? hrApprovedThisRound : (d.businessUnit?.requiresHrApproval ?? true) || s === "PENDING_HR" || hrApprovedThisRound;
 
-  return [
-    first,
-    stage("hod", "Department HOD", "PENDING_HOD", 0, holders.hod),
-    stage("bu", "BU Admin", "PENDING_BU", 1, holders.bu ?? "BU Admin"),
-    stage("lnd", "L&D review", "PENDING_LND", 2, "L&D Team"),
-    ...(showHr ? [stage("hr", "HR Head", "PENDING_HR", 3, holders.hr)] : []),
-    last,
-  ];
+  return [first, ...shown.map((st) => stage(st.key, st.label, st.status, order.indexOf(st.status), st.holder)), last];
 }

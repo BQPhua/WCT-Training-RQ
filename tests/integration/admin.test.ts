@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
-import { adminAuditLogs, departments, roleAssignments, users } from "@/db/schema";
+import { adminAuditLogs, businessUnits, departments, roleAssignments, users } from "@/db/schema";
 import { seed } from "@/db/seed";
-import { adminOverview, assignRole, listUsers, revokeRole, setBusinessUnitAdmins, updateUser, upsertBusinessUnit, upsertDepartment, userOptions } from "@/lib/services/admin";
+import { adminOverview, assignRole, flowOverview, updateBusinessUnitFlow, listUsers, revokeRole, setBusinessUnitAdmins, updateUser, upsertBusinessUnit, upsertDepartment, searchPeople } from "@/lib/services/admin";
 import { asUser } from "./helpers";
 import { resetDb } from "./setup";
 
@@ -63,12 +63,55 @@ describe("admin services", () => {
     await expect(updateUser(a, lnd.id, { isActive: false })).rejects.toThrow(/last system admin/i);
   });
 
-  it("upsertBusinessUnit stores requiresHrApproval (default true)", async () => {
+  it("editing a unit's name or code never changes its approval route", async () => {
     const lnd = await realLnd();
-    const created = await upsertBusinessUnit(lnd, { code: "HOSP", name: "Hospitality", isActive: true });
-    expect(created.requiresHrApproval).toBe(true);
-    const updated = await upsertBusinessUnit(lnd, { id: created.id, code: "HOSP", name: "Hospitality", isActive: true, requiresHrApproval: false });
-    expect(updated.requiresHrApproval).toBe(false);
+    const [land] = await db.select().from(businessUnits).where(eq(businessUnits.code, "LAND"));
+    expect(land.requiresHrApproval).toBe(false);
+    const renamed = await upsertBusinessUnit(lnd, { id: land.id, code: "LAND", name: "Land & Property", isActive: true });
+    expect(renamed.requiresHrApproval).toBe(false);
+    expect(renamed.requiresBuAdmin).toBe(true);
+  });
+
+  it("updateBusinessUnitFlow saves the switches and notes and is audit-logged", async () => {
+    const lnd = await realLnd();
+    const [land] = await db.select().from(businessUnits).where(eq(businessUnits.code, "LAND"));
+    const saved = await updateBusinessUnitFlow(lnd, land.id, { requiresBuAdmin: false, requiresHrApproval: true, stepNotes: { HOD: "Head of department" } });
+    expect(saved.requiresBuAdmin).toBe(false);
+    expect(saved.requiresHrApproval).toBe(true);
+    expect(saved.stepNotes).toEqual({ HOD: "Head of department" });
+    const logs = await db.select().from(adminAuditLogs).where(eq(adminAuditLogs.entityId, land.id));
+    expect(logs.some((l) => l.entity === "business_unit_flow")).toBe(true);
+  });
+
+  it("updateBusinessUnitFlow only changes the fields it is given (no lost updates)", async () => {
+    const lnd = await realLnd();
+    const [land] = await db.select().from(businessUnits).where(eq(businessUnits.code, "LAND"));
+    await updateBusinessUnitFlow(lnd, land.id, { requiresBuAdmin: false });
+    const after = await updateBusinessUnitFlow(lnd, land.id, { stepNotes: { HOD: "Head of department" } });
+    expect(after.requiresBuAdmin).toBe(false);
+    expect(after.requiresHrApproval).toBe(false);
+    expect(after.stepNotes).toEqual({ HOD: "Head of department" });
+  });
+
+  it("updateBusinessUnitFlow refuses demo admins, notes over 40 characters and unknown steps", async () => {
+    const [land] = await db.select().from(businessUnits).where(eq(businessUnits.code, "LAND"));
+    await expect(updateBusinessUnitFlow(await asUser("admin@demo.wct.my"), land.id, { requiresBuAdmin: true, requiresHrApproval: true, stepNotes: {} })).rejects.toThrow(
+      "Demo accounts can look at settings but can't change them.",
+    );
+    const lnd = await realLnd();
+    await expect(updateBusinessUnitFlow(lnd, land.id, { requiresBuAdmin: true, requiresHrApproval: true, stepNotes: { HOD: "x".repeat(41) } })).rejects.toThrow();
+    await expect(
+      updateBusinessUnitFlow(lnd, land.id, { requiresBuAdmin: true, requiresHrApproval: true, stepNotes: { CEO: "nope" } as never }),
+    ).rejects.toThrow();
+  });
+
+  it("flowOverview gives each unit's route, BU Admin names and resolved notes", async () => {
+    const units = await flowOverview(await asUser("lnd1@demo.wct.my"));
+    const land = units.find((u) => u.code === "LAND")!;
+    expect(land.route).toEqual(["HOD", "BU", "LND"]);
+    expect(land.buAdmins).toEqual(["Lee Mei Ling"]);
+    expect(land.notes.LND).toBe("Reviews and gives final approval");
+    expect(units.find((u) => u.code === "ENC")!.notes.LND).toBe("Reviews");
   });
 
   it("gives the L&D team full admin access", async () => {
@@ -94,8 +137,9 @@ describe("admin services", () => {
     expect(people.every((p) => p.email.endsWith("@demo.wct.my"))).toBe(true);
     const o = await adminOverview(demoLnd);
     expect(o.roles.every((r) => r.email.endsWith("@demo.wct.my"))).toBe(true);
-    expect((await userOptions(demoLnd)).every((p) => p.email.endsWith("@demo.wct.my"))).toBe(true);
-    expect((await userOptions(await admin2())).some((p) => p.email === "it.admin@wct.my")).toBe(true);
+    expect((await searchPeople(demoLnd, "a")).every((p) => p.email.endsWith("@demo.wct.my"))).toBe(true);
+    expect((await searchPeople(demoLnd, "admin")).every((p) => p.email.endsWith("@demo.wct.my"))).toBe(true);
+    expect((await searchPeople(await admin2(), "it.admin")).some((p) => p.email === "it.admin@wct.my")).toBe(true);
   });
 
   it("creates a department with HOD and audits it", async () => {
@@ -127,5 +171,26 @@ describe("admin services", () => {
   it("refuses to deactivate yourself", async () => {
     const a = await admin();
     await expect(updateUser(a, a.id, { isActive: false })).rejects.toThrow(/yourself/i);
+  });
+});
+
+describe("searchPeople", () => {
+  it("finds active people by name or email, at most 10, after 2 characters", async () => {
+    const { searchPeople } = await import("@/lib/services/admin");
+    const lnd = await realLnd();
+    await db.insert(users).values(Array.from({ length: 12 }, (_, i) => ({ email: `hakim${i}@wct.my`, name: `Hakim ${i}` })));
+    await db.insert(users).values({ email: "gone@wct.my", name: "Hakim Gone", isActive: false });
+    expect(await searchPeople(lnd, "h")).toEqual([]);
+    const found = await searchPeople(lnd, "hakim");
+    expect(found).toHaveLength(10);
+    expect(found.some((p) => p.email === "gone@wct.my")).toBe(false);
+    expect((await searchPeople(lnd, "HAKIM3@WCT"))[0]).toMatchObject({ email: "hakim3@wct.my", name: "Hakim 3" });
+  });
+
+  it("demo viewers only find demo people", async () => {
+    const { searchPeople } = await import("@/lib/services/admin");
+    await db.insert(users).values({ email: "hafiz.real@wct.my", name: "Hafiz Real" });
+    const found = await searchPeople(await asUser("lnd1@demo.wct.my"), "hafiz");
+    expect(found.map((p) => p.email)).toEqual(["buadmin.enc@demo.wct.my"]);
   });
 });

@@ -56,6 +56,8 @@ export async function syncUserFromProfile(profile: EntraProfile): Promise<User> 
         entraDepartment: entraDept,
         departmentId: matchedDeptId ?? existing.departmentId,
         lastLoginAt: new Date(),
+        // Signing in with Microsoft proves the account is in Microsoft 365 (so it is never flagged as a leaver).
+        directorySeenAt: new Date(),
       })
       .where(eq(users.id, existing.id))
       .returning();
@@ -70,6 +72,7 @@ export async function syncUserFromProfile(profile: EntraProfile): Promise<User> 
         entraDepartment: entraDept,
         departmentId: matchedDeptId,
         lastLoginAt: new Date(),
+        directorySeenAt: new Date(),
       })
       .returning();
   }

@@ -94,11 +94,11 @@ curl http://127.0.0.1:3110/WCT-Training-RQ/api/health  # {"ok":true,"db":true}
 > **Sample data for a trial run** (optional): `sudo -iu trq /opt/wct-training-rq/current/scripts/demo-data.sh load`
 > - It adds 12 demo people (`@demo.wct.my`), 7 demo departments and about 30 requests in every status. No emails are sent.
 > - Load it **before** you create real departments.
-> - **Go-live order:** first assign the real BU Admins (Land, E&C, Malls), L&D Team and HR Head in **Admin settings**, then run `… demo-data.sh remove`. Removing the demo data also removes the demo BU Admins, and requests can't be submitted while a business unit has no BU Admin.
+> - **Go-live order:** first assign the real BU Admins (Land, E&C, Malls), L&D Team and HR Head in **Admin settings** (with the Microsoft 365 sync on, everyone is already listed, so just type their name), then run the go-live command below. Removing the demo data also removes the demo BU Admins, and requests can't be submitted while a business unit whose route has the BU Admin step has no BU Admin.
 > - Demo and real staff never mix: demo requests are routed and emailed only to demo accounts, and real requests only to real staff. A real request therefore needs a real BU Admin for its business unit, and real approvers handle demo requests only through **View as demo user**.
 > - Demo accounts only ever see and act on requests raised by demo accounts (lists, dashboard, analytics, exports, request pages, files), and Admin settings are read-only for them, listing demo accounts only.
 > - **Demo sign-in for stakeholders:** add `DEMO_LOGIN=true` to `shared/.env`, then `sudo -iu trq pm2 reload wct-training-rq --update-env`. The sign-in page shows "Try a demo account" with one button per demo person, grouped by role.
-> - **At go-live:** remove `DEMO_LOGIN` from `shared/.env` and reload **first**, then assign real role holders, then run `demo-data.sh remove`.
+> - **At go-live, one command:** `sudo -iu trq /opt/wct-training-rq/current/scripts/demo-data.sh golive`. It shows how many demo accounts and requests it will remove and asks you to type `GO-LIVE`. It then removes all demo data (accounts, requests, files, demo departments), sets `DEMO_LOGIN=false` in `shared/.env` (keeping a `.env.bak-<date>` copy) and reloads the app. Running it twice is harmless.
 > - Removal deletes only demo records, and reference numbers continue from the highest real one.
 
 ## 6. Nginx
@@ -112,7 +112,9 @@ curl -I https://hrforms.wct.my/WCT-Training-RQ/signin   # expect 200
 
 ## 7. Scheduled jobs
 
-As `trq`, run `crontab -e` and paste the two lines from [`deploy/crontab.txt`](../deploy/crontab.txt). They retry failed notifications every 5 minutes and take a nightly backup.
+As `trq`, run `crontab -e` and paste the three job lines from [`deploy/crontab.txt`](../deploy/crontab.txt). They retry failed notifications every 5 minutes, copy Microsoft 365 staff in every night at 01:40, and take a nightly backup.
+
+**Existing servers (installed before the staff sync):** run `crontab -e` as `trq` and add only the `40 1 * * *` line from `deploy/crontab.txt`. Its log is `/opt/wct-training-rq/shared/directory-sync.log`.
 
 ## 8. Auto-deploy from GitHub
 
@@ -160,6 +162,19 @@ The sign-in button shows Microsoft's logo when `public/brand/microsoft-logo.svg`
 3. Auto-deploy publishes it.
 
 Until the file is there, the button shows a key icon.
+
+## Microsoft 365 staff sync
+
+Training RQ copies every enabled WCT staff member (name, email, job title, department) from Microsoft 365 into its user list, so L&D can assign roles to people before they first sign in. It needs:
+
+- the Graph application permission `User.Read.All` with admin consent (see ENTRA_SETUP.md);
+- `DIRECTORY_SEARCH_GRAPH=true` and the `ENTRA_*` settings in `shared/.env`.
+
+It runs every night at 01:40 from the crontab (`deploy/crontab.txt`), and from **Admin settings → Users → Sync now**. The Users page shows when the last sync ran and how many people were added or updated.
+
+- People who left WCT (no longer an enabled account) are flagged "No longer in Microsoft 365". Nobody is switched off automatically; deactivate them on the Users page.
+- Demo accounts and users an admin deactivated are never changed by the sync.
+- The log of the nightly run is `/opt/wct-training-rq/shared/directory-sync.log` (one timestamp and one JSON result per night; a failed run's error is kept).
 
 ## Sign-in photo
 

@@ -1,5 +1,7 @@
 import "server-only";
-import { and, asc, countDistinct, desc, eq, ilike, inArray, like as sqlLike, ne, not, or, sql, type SQL } from "drizzle-orm";
+import { lastCompleteSyncStart, runDirectorySync } from "./directory-sync";
+import { routeOf } from "@/lib/workflow/route";
+import { and, asc, countDistinct, desc, eq, ilike, inArray, isNotNull, isNull, like as sqlLike, lt, ne, not, or, sql, type SQL } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
 import {
@@ -51,8 +53,6 @@ const buSchema = z.object({
   code: z.string().trim().toUpperCase().regex(/^[A-Z0-9_]{2,12}$/, "Code must be 2–12 letters/numbers"),
   name: z.string().trim().min(1).max(60),
   isActive: z.boolean(),
-  /** "Final approval by HR Head". Off: L&D gives final approval (Land, Malls). */
-  requiresHrApproval: z.boolean().default(true),
 });
 
 export async function upsertBusinessUnit(user: CurrentUser, input: z.input<typeof buSchema>) {
@@ -66,10 +66,10 @@ export async function upsertBusinessUnit(user: CurrentUser, input: z.input<typeo
   const [row] = d.id
     ? await db
         .update(businessUnits)
-        .set({ code: d.code, name: d.name, isActive: d.isActive, requiresHrApproval: d.requiresHrApproval })
+        .set({ code: d.code, name: d.name, isActive: d.isActive })
         .where(eq(businessUnits.id, d.id))
         .returning()
-    : await db.insert(businessUnits).values({ code: d.code, name: d.name, isActive: d.isActive, requiresHrApproval: d.requiresHrApproval }).returning();
+    : await db.insert(businessUnits).values({ code: d.code, name: d.name, isActive: d.isActive }).returning();
   await audit(user, "business_unit", row.id, { ...d, op: d.id ? "update" : "create" });
   return row;
 }
@@ -177,6 +177,81 @@ export async function createUser(user: CurrentUser, input: { email: string; name
 }
 
 // ---------- Reads for admin pages ----------
+// ---------- Approval flow (per business unit) ----------
+export const STEP_KEYS = ["REQUESTER", "HOD", "BU", "LND", "HR"] as const;
+export type StepKey = (typeof STEP_KEYS)[number];
+
+const flowSchema = z.object({
+  requiresBuAdmin: z.boolean().optional(),
+  requiresHrApproval: z.boolean().optional(),
+  stepNotes: z
+    .object(Object.fromEntries(STEP_KEYS.map((k) => [k, z.string().trim().max(40, "Keep each description to 40 characters").optional()])) as Record<StepKey, z.ZodOptional<z.ZodString>>)
+    .strict()
+    .optional(),
+});
+
+/** The description under a step: the unit's own note, or a default that follows the route. */
+export function noteFor(step: StepKey, bu: { requiresHrApproval: boolean; stepNotes: Partial<Record<StepKey, string>> }): string {
+  const own = bu.stepNotes[step]?.trim();
+  if (own) return own;
+  switch (step) {
+    case "REQUESTER":
+      return "Raises the request";
+    case "HOD":
+      return "Department head";
+    case "BU":
+      return "BU Admin review";
+    case "LND":
+      return bu.requiresHrApproval ? "Reviews" : "Reviews and gives final approval";
+    case "HR":
+      return "Final approval";
+  }
+}
+
+/**
+ * Switch a unit's optional steps (BU Admin, HR Head) and/or set its step descriptions. Only the
+ * fields given are changed, so two admins editing different things never undo each other.
+ * Applies to the next approval.
+ */
+export async function updateBusinessUnitFlow(user: CurrentUser, buId: string, input: z.input<typeof flowSchema>) {
+  requireAdmin(user);
+  const id = UUID.parse(buId);
+  const d = flowSchema.parse(input);
+  const change: { requiresBuAdmin?: boolean; requiresHrApproval?: boolean; stepNotes?: Partial<Record<StepKey, string>> } = {};
+  if (d.requiresBuAdmin !== undefined) change.requiresBuAdmin = d.requiresBuAdmin;
+  if (d.requiresHrApproval !== undefined) change.requiresHrApproval = d.requiresHrApproval;
+  if (d.stepNotes) change.stepNotes = Object.fromEntries(Object.entries(d.stepNotes).filter(([, v]) => v)) as Partial<Record<StepKey, string>>;
+  if (!Object.keys(change).length) throw new ServiceError("Nothing to change.", 422);
+  const [row] = await db.update(businessUnits).set(change).where(eq(businessUnits.id, id)).returning();
+  if (!row) throw new ServiceError("That business unit no longer exists.", 404);
+  await audit(user, "business_unit_flow", row.id, change);
+  return row;
+}
+
+/** Each active unit's approval flow for the Approval flow tab. */
+export async function flowOverview(user: CurrentUser) {
+  requireAdminRead(user);
+  const [bus, admins] = await Promise.all([
+    db.select().from(businessUnits).where(eq(businessUnits.isActive, true)).orderBy(asc(businessUnits.name)),
+    db
+      .select({ businessUnitId: businessUnitAdmins.businessUnitId, name: users.name })
+      .from(businessUnitAdmins)
+      .innerJoin(users, and(eq(businessUnitAdmins.userId, users.id), eq(users.isActive, true), peopleScope(user)))
+      .orderBy(asc(users.name)),
+  ]);
+  return bus.map((bu) => ({
+    id: bu.id,
+    code: bu.code,
+    name: bu.name,
+    requiresBuAdmin: bu.requiresBuAdmin,
+    requiresHrApproval: bu.requiresHrApproval,
+    route: routeOf(bu),
+    buAdmins: admins.filter((a) => a.businessUnitId === bu.id).map((a) => a.name),
+    stepNotes: bu.stepNotes,
+    notes: Object.fromEntries(STEP_KEYS.map((k) => [k, noteFor(k, bu)])) as Record<StepKey, string>,
+  }));
+}
+
 export async function adminOverview(user: CurrentUser) {
   requireAdminRead(user);
   const people = peopleScope(user);
@@ -206,25 +281,61 @@ export async function adminOverview(user: CurrentUser) {
   return { bus, depts: shownDepts, buAdmins, roles, failedNotifications: failed };
 }
 
-export async function listUsers(user: CurrentUser, q?: string) {
+export type UserStatusFilter = "all" | "signed-in" | "not-signed-in" | "left";
+
+/**
+ * Users for Admin settings → Users (at most 200; search to narrow). `leftDirectory` marks an
+ * active person with a Microsoft ID whom the last complete Microsoft 365 sync did not find.
+ */
+export async function listUsers(user: CurrentUser, q?: string, status: UserStatusFilter = "all") {
   requireAdminRead(user);
   const like = q ? `%${q.replace(/[%_\\]/g, "\\$&")}%` : null;
-  return db
-    .select({ id: users.id, name: users.name, email: users.email, jobTitle: users.jobTitle, isActive: users.isActive, departmentId: users.departmentId, entraDepartment: users.entraDepartment, lastLoginAt: users.lastLoginAt, departmentName: departments.name })
+  const since = await lastCompleteSyncStart();
+  const left = since
+    ? and(eq(users.isActive, true), isNotNull(users.entraOid), or(isNull(users.directorySeenAt), lt(users.directorySeenAt, since)))
+    : sql`false`;
+  const statusWhere =
+    status === "signed-in" ? isNotNull(users.lastLoginAt) : status === "not-signed-in" ? isNull(users.lastLoginAt) : status === "left" ? left : sql`true`;
+  const rows = await db
+    .select({
+      id: users.id,
+      name: users.name,
+      email: users.email,
+      jobTitle: users.jobTitle,
+      isActive: users.isActive,
+      departmentId: users.departmentId,
+      entraDepartment: users.entraDepartment,
+      lastLoginAt: users.lastLoginAt,
+      departmentName: departments.name,
+      leftDirectory: sql<boolean>`coalesce(${left}, false)`,
+    })
     .from(users)
     .leftJoin(departments, eq(users.departmentId, departments.id))
-    .where(and(peopleScope(user), like ? or(ilike(users.name, like), ilike(users.email, like)) : sql`true`))
+    .where(and(peopleScope(user), like ? or(ilike(users.name, like), ilike(users.email, like)) : sql`true`, statusWhere))
     .orderBy(asc(users.name))
     .limit(200);
+  return rows.map((r) => ({ ...r, leftDirectory: Boolean(r.leftDirectory) && !isDemoUser(r) }));
 }
 
-export async function userOptions(user: CurrentUser) {
+/** "Sync now" on Admin settings → Users. */
+export async function syncDirectoryNow(user: CurrentUser) {
+  requireAdmin(user);
+  return runDirectorySync({ trigger: "manual", triggeredBy: user.id });
+}
+
+/** People search for admin pickers: active, in the viewer's scope, by name or email; at most 10. */
+export async function searchPeople(user: CurrentUser, q: string) {
   requireAdminRead(user);
+  const term = q.trim();
+  if (term.length < 2) return [];
+  const like = `%${term.replace(/[%_\\]/g, "\\$&")}%`;
   return db
-    .select({ id: users.id, name: users.name, email: users.email })
+    .select({ id: users.id, name: users.name, email: users.email, department: departments.name })
     .from(users)
-    .where(and(eq(users.isActive, true), peopleScope(user)))
-    .orderBy(asc(users.name));
+    .leftJoin(departments, eq(users.departmentId, departments.id))
+    .where(and(eq(users.isActive, true), peopleScope(user), or(ilike(users.name, like), ilike(users.email, like))))
+    .orderBy(asc(users.name))
+    .limit(10);
 }
 
 /** Demo viewers only see notifications about demo requests. */

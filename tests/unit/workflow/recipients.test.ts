@@ -33,6 +33,12 @@ describe("resolveRecipients", () => {
     expect(emails(r.cc)).toEqual([P.requester.email]);
   });
 
+  it("HOD_APPROVED with the BU Admin step off → L&D, cc requester and the unit's BU Admins", () => {
+    const r = resolveRecipients(ev({ kind: "HOD_APPROVED", fromStatus: "PENDING_HOD", toStatus: "PENDING_LND", actorId: P.hod.id }), parties);
+    expect(emails(r.to)).toEqual(emails([P.lnd1, P.lnd2]));
+    expect(emails(r.cc)).toEqual(emails([P.requester, P.bua]));
+  });
+
   it("FINAL_APPROVED → requester, cc HOD, BU Admin, L&D", () => {
     const r = resolveRecipients(ev({ kind: "FINAL_APPROVED", fromStatus: "PENDING_HR", actorId: P.hr.id }), parties);
     expect(emails(r.to)).toEqual([P.requester.email]);

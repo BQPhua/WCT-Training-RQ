@@ -1,7 +1,7 @@
 import { RoleEditor } from "@/components/admin/role-editor";
 import { Panel, PanelHeader } from "@/components/ui/panel";
 import { requireUser } from "@/lib/auth/current-user";
-import { adminOverview, userOptions } from "@/lib/services/admin";
+import { adminOverview } from "@/lib/services/admin";
 import type { RoleName } from "@/lib/workflow";
 
 export const metadata = { title: "Admin · Roles" };
@@ -14,13 +14,13 @@ const ROLES: { role: RoleName; title: string; description: string }[] = [
 
 export default async function RolesPage() {
   const user = await requireUser();
-  const [o, users] = await Promise.all([adminOverview(user), userOptions(user)]);
+  const o = await adminOverview(user);
   return (
     <div className="grid gap-6 lg:grid-cols-3">
       {ROLES.map((r) => (
         <Panel key={r.role}>
           <PanelHeader title={r.title} description={r.description} />
-          <RoleEditor role={r.role} users={users} holders={o.roles.filter((x) => x.role === r.role).map((x) => ({ id: x.userId, name: x.name, email: x.email }))} />
+          <RoleEditor role={r.role} title={r.title} holders={o.roles.filter((x) => x.role === r.role).map((x) => ({ id: x.userId, name: x.name, email: x.email }))} />
         </Panel>
       ))}
     </div>

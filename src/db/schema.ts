@@ -48,6 +48,22 @@ const updatedAt = () =>
     .defaultNow()
     .$onUpdate(() => new Date());
 
+// ---------- Microsoft 365 staff sync ----------
+export const directorySyncRuns = pgTable("directory_sync_runs", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
+  finishedAt: timestamp("finished_at", { withTimezone: true }),
+  trigger: text("trigger").notNull(), // "cron" | "manual"
+  triggeredById: uuid("triggered_by_id"),
+  added: integer("added").notNull().default(0),
+  updated: integer("updated").notNull().default(0),
+  skipped: integer("skipped").notNull().default(0),
+  flagged: integer("flagged").notNull().default(0),
+  ok: boolean("ok"),
+  error: text("error"),
+});
+export type DirectorySyncRun = typeof directorySyncRuns.$inferSelect;
+
 // ---------- Organisation ----------
 export const businessUnits = pgTable("business_units", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -56,6 +72,10 @@ export const businessUnits = pgTable("business_units", {
   isActive: boolean("is_active").notNull().default(true),
   /** E&C needs HR Head's final approval; Land and Malls are finalised by L&D. */
   requiresHrApproval: boolean("requires_hr_approval").notNull().default(true),
+  /** Off: HOD approval goes straight to L&D (BU Admins are still kept informed). */
+  requiresBuAdmin: boolean("requires_bu_admin").notNull().default(true),
+  /** Optional short descriptions shown under each step on the Approval flow tab (≤ 40 chars). */
+  stepNotes: jsonb("step_notes").$type<Partial<Record<"REQUESTER" | "HOD" | "BU" | "LND" | "HR", string>>>().notNull().default({}),
   createdAt: createdAt(),
 });
 
@@ -86,6 +106,8 @@ export const users = pgTable(
     departmentId: uuid("department_id").references(() => departments.id, { onDelete: "set null" }),
     isActive: boolean("is_active").notNull().default(true),
     lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
+    /** Last time the Microsoft 365 sync found this person (null: never seen by a sync). */
+    directorySeenAt: timestamp("directory_seen_at", { withTimezone: true }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },

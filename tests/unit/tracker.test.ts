@@ -6,7 +6,7 @@ const t = (m: number) => new Date(2026, 9, 1, 9, m);
 function detail(
   status: string,
   actions: { action: string; fromStatus?: string; m: number; name?: string }[],
-  businessUnit: { name: string; requiresHrApproval: boolean } | null = { name: "E&C", requiresHrApproval: true },
+  businessUnit: { name: string; requiresHrApproval: boolean; requiresBuAdmin?: boolean } | null = { name: "E&C", requiresHrApproval: true },
 ): RequestDetail {
   return {
     businessUnit,
@@ -127,6 +127,28 @@ describe("buildStations", () => {
     it("a Malls request finalised by L&D shows no HR station after the unit is switched back to HR Head", () => {
       const d = detail("APPROVED", [...upToLnd, { action: "APPROVE", fromStatus: "PENDING_LND", m: 4 }], { name: "Malls", requiresHrApproval: true });
       expect(buildStations(d, { hod: "Tan", bu: "Lee", hr: "Farah" }).map((s) => s.key)).toEqual(["submit", "hod", "bu", "lnd", "final"]);
+    });
+  });
+
+  describe("BU Admin step switched off", () => {
+    const keys = (d: RequestDetail) => buildStations(d, { hod: "Tan", bu: "Lee", hr: "Farah" }).map((s) => s.key);
+    const LAND_NO_BU = { name: "Land", requiresHrApproval: false, requiresBuAdmin: false };
+    it("an open request skips the BU station", () => {
+      expect(keys(detail("PENDING_HOD", [{ action: "SUBMIT", fromStatus: "DRAFT", m: 1 }], LAND_NO_BU))).toEqual(["submit", "hod", "lnd", "final"]);
+    });
+    it("an in-flight PENDING_BU request still shows BU as current", () => {
+      const d = detail("PENDING_BU", [{ action: "SUBMIT", fromStatus: "DRAFT", m: 1 }, { action: "APPROVE", fromStatus: "PENDING_HOD", m: 2 }], LAND_NO_BU);
+      const st = buildStations(d, { hod: "Tan", bu: "Lee", hr: "Farah" });
+      expect(st.map((s) => s.key)).toEqual(["submit", "hod", "bu", "lnd", "final"]);
+      expect(st.find((s) => s.key === "bu")!.state).toBe("current");
+    });
+    it("an approved request shows only the stages approved this round", () => {
+      const d = detail(
+        "APPROVED",
+        [{ action: "SUBMIT", fromStatus: "DRAFT", m: 1 }, { action: "APPROVE", fromStatus: "PENDING_HOD", m: 2 }, { action: "APPROVE", fromStatus: "PENDING_LND", m: 3 }],
+        { name: "Land", requiresHrApproval: true, requiresBuAdmin: true },
+      );
+      expect(keys(d)).toEqual(["submit", "hod", "lnd", "final"]);
     });
   });
 });
