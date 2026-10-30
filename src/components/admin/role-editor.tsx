@@ -5,11 +5,12 @@ import { assignRoleAction, revokeRoleAction } from "@/app/(app)/admin/actions";
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/misc";
 import type { RoleName } from "@/lib/workflow";
-import { UserSelect, type UserOpt } from "./org-editors";
+import type { UserOpt } from "./org-editors";
+import { PersonPicker, type PickedPerson } from "./person-picker";
 import { useAdminAction } from "./use-admin-action";
 
-export function RoleEditor({ role, holders, users }: { role: RoleName; holders: UserOpt[]; users: UserOpt[] }) {
-  const [pick, setPick] = React.useState("");
+export function RoleEditor({ role, title, holders }: { role: RoleName; title: string; holders: UserOpt[] }) {
+  const [pick, setPick] = React.useState<PickedPerson | null>(null);
   const { busy, exec } = useAdminAction();
   return (
     <div>
@@ -29,8 +30,8 @@ export function RoleEditor({ role, holders, users }: { role: RoleName; holders: 
         ))}
       </ul>
       <div className="flex gap-2 border-t border-line px-5 py-3">
-        <UserSelect users={users.filter((u) => !holders.some((h) => h.id === u.id))} value={pick} onChange={setPick} placeholder="Add a person…" />
-        <Button variant="outline" disabled={!pick || busy} onClick={async () => (await exec(assignRoleAction(pick, role), "Role assigned")) && setPick("")}>
+        <PersonPicker value={pick} onChange={setPick} exclude={holders.map((h) => h.id)} label={`Add a person to ${title}`} placeholder="Add a person…" />
+        <Button variant="outline" disabled={!pick || busy} onClick={async () => pick && (await exec(assignRoleAction(pick.id, role), "Role assigned")) && setPick(null)}>
           Add
         </Button>
       </div>

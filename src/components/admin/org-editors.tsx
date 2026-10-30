@@ -5,22 +5,11 @@ import { saveBuAdminsAction, saveBusinessUnitAction, saveDepartmentAction } from
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { Field, Input, NativeSelect } from "@/components/ui/field";
+import { PersonPicker, type PickedPerson } from "./person-picker";
 import { useAdminAction } from "./use-admin-action";
 
 export type UserOpt = { id: string; name: string; email: string };
 
-export function UserSelect({ users, value, onChange, id, placeholder = "Select a person…" }: { users: UserOpt[]; value: string; onChange: (v: string) => void; id?: string; placeholder?: string }) {
-  return (
-    <NativeSelect id={id} value={value} onChange={(e) => onChange(e.target.value)}>
-      <option value="">{placeholder}</option>
-      {users.map((u) => (
-        <option key={u.id} value={u.id}>
-          {u.name} — {u.email}
-        </option>
-      ))}
-    </NativeSelect>
-  );
-}
 
 type BuValues = { id: string; code: string; name: string; isActive: boolean };
 
@@ -80,8 +69,8 @@ function BuForm({ bu, onSaved }: { bu?: BuValues; onSaved: () => void }) {
   );
 }
 
-export function BuAdminsEditor({ buId, current, users }: { buId: string; current: UserOpt[]; users: UserOpt[] }) {
-  const [pick, setPick] = React.useState("");
+export function BuAdminsEditor({ buId, buName, current }: { buId: string; buName: string; current: UserOpt[] }) {
+  const [pick, setPick] = React.useState<PickedPerson | null>(null);
   const { busy, exec } = useAdminAction();
   const ids = current.map((c) => c.id);
   return (
@@ -104,12 +93,12 @@ export function BuAdminsEditor({ buId, current, users }: { buId: string; current
         ))}
       </ul>
       <div className="flex gap-2">
-        <UserSelect users={users.filter((u) => !ids.includes(u.id))} value={pick} onChange={setPick} placeholder="Add BU Admin…" />
+        <PersonPicker value={pick} onChange={setPick} exclude={ids} label={`Add BU Admin to ${buName}`} placeholder="Add BU Admin…" />
         <Button
           variant="outline"
           disabled={!pick || busy}
           onClick={async () => {
-            if (await exec(saveBuAdminsAction(buId, [...ids, pick]), "BU Admin added")) setPick("");
+            if (pick && (await exec(saveBuAdminsAction(buId, [...ids, pick.id]), "BU Admin added"))) setPick(null);
           }}
         >
           Add
@@ -122,16 +111,14 @@ export function BuAdminsEditor({ buId, current, users }: { buId: string; current
 export function DeptDialog({
   dept,
   bus,
-  users,
 }: {
-  dept?: { id: string; name: string; businessUnitId: string; hodUserId: string | null; isActive: boolean };
+  dept?: { id: string; name: string; businessUnitId: string; hodUserId: string | null; hodName?: string | null; isActive: boolean };
   bus: { id: string; name: string }[];
-  users: UserOpt[];
 }) {
   const [open, setOpen] = React.useState(false);
   const [name, setName] = React.useState(dept?.name ?? "");
   const [buId, setBuId] = React.useState(dept?.businessUnitId ?? bus[0]?.id ?? "");
-  const [hod, setHod] = React.useState(dept?.hodUserId ?? "");
+  const [hod, setHod] = React.useState<PickedPerson | null>(dept?.hodUserId && dept.hodName ? { id: dept.hodUserId, name: dept.hodName, email: "" } : null);
   const [active, setActive] = React.useState(dept?.isActive ?? true);
   const { busy, exec } = useAdminAction();
   return (
@@ -152,7 +139,7 @@ export function DeptDialog({
           className="space-y-4"
           onSubmit={async (e) => {
             e.preventDefault();
-            if (await exec(saveDepartmentAction({ id: dept?.id, name, businessUnitId: buId, hodUserId: hod || null, isActive: active }), "Department saved")) setOpen(false);
+            if (await exec(saveDepartmentAction({ id: dept?.id, name, businessUnitId: buId, hodUserId: hod?.id ?? null, isActive: active }), "Department saved")) setOpen(false);
           }}
         >
           <Field label="Department name" htmlFor="d-name" required hint="Match the Microsoft 365 'Department' value so staff are mapped automatically.">
@@ -168,7 +155,7 @@ export function DeptDialog({
             </NativeSelect>
           </Field>
           <Field label="Head of department (HOD)" htmlFor="d-hod">
-            <UserSelect id="d-hod" users={users} value={hod} onChange={setHod} placeholder="No HOD assigned" />
+            <PersonPicker id="d-hod" value={hod} onChange={setHod} label="Head of department (HOD)" placeholder="No HOD assigned — type a name" />
           </Field>
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" className="size-4" checked={active} onChange={(e) => setActive(e.target.checked)} /> Active

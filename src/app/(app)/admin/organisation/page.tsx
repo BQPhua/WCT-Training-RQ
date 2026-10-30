@@ -3,13 +3,13 @@ import { CircleAlert } from "lucide-react";
 import { BuAdminsEditor, BuDialog, DeptDialog } from "@/components/admin/org-editors";
 import { Panel, PanelHeader } from "@/components/ui/panel";
 import { requireUser } from "@/lib/auth/current-user";
-import { adminOverview, userOptions } from "@/lib/services/admin";
+import { adminOverview } from "@/lib/services/admin";
 
 export const metadata = { title: "Admin · Organisation" };
 
 export default async function OrganisationPage() {
   const user = await requireUser();
-  const [o, users] = await Promise.all([adminOverview(user), userOptions(user)]);
+  const o = await adminOverview(user);
   return (
     <div className="space-y-6">
       <Panel>
@@ -26,14 +26,14 @@ export default async function OrganisationPage() {
                   Final approval: <span className="font-medium text-ink-2">{b.requiresHrApproval ? "HR Head" : "L&D Team"}</span> · change in Approval flow
                 </Link>
               </div>
-              <BuAdminsEditor buId={b.id} users={users} current={o.buAdmins.filter((a) => a.businessUnitId === b.id).map((a) => ({ id: a.userId, name: a.name, email: "" }))} />
+              <BuAdminsEditor buId={b.id} buName={b.name} current={o.buAdmins.filter((a) => a.businessUnitId === b.id).map((a) => ({ id: a.userId, name: a.name, email: "" }))} />
             </li>
           ))}
         </ul>
       </Panel>
 
       <Panel className="overflow-hidden">
-        <PanelHeader title="Head of Departments" actions={<DeptDialog bus={o.bus} users={users} />} />
+        <PanelHeader title="Head of Departments" actions={<DeptDialog bus={o.bus} />} />
         <div className="overflow-x-auto">
           <table className="w-full min-w-[640px] text-sm">
             <thead className="border-b border-line bg-surface-2 text-xs text-muted">
@@ -57,7 +57,7 @@ export default async function OrganisationPage() {
                     )}
                   </td>
                   <td className="px-5 py-2.5 text-right">
-                    <DeptDialog dept={d} bus={o.bus} users={users} />
+                    <DeptDialog dept={d} bus={o.bus} />
                   </td>
                 </tr>
               ))}

@@ -3,7 +3,7 @@ import { revalidatePath } from "next/cache";
 import { requireApiUser } from "@/lib/auth/current-user";
 import { isDemoUser, isSystemAdmin } from "@/lib/auth/roles";
 import { toActionError, type ActionResult } from "@/lib/action-result";
-import { assignRole, createUser, revokeRole, setBusinessUnitAdmins, syncDirectoryNow, updateBusinessUnitFlow, updateUser, upsertBusinessUnit, upsertDepartment, type StepKey } from "@/lib/services/admin";
+import { assignRole, createUser, revokeRole, searchPeople, setBusinessUnitAdmins, syncDirectoryNow, updateBusinessUnitFlow, updateUser, upsertBusinessUnit, upsertDepartment, type StepKey } from "@/lib/services/admin";
 import { deliver } from "@/lib/notify/send";
 import type { RoleName } from "@/lib/workflow";
 
@@ -62,5 +62,14 @@ export async function syncNowAction(): Promise<ActionResult<{ summary: string }>
     return { ok: true, summary: `Synced: ${run.added} added, ${run.updated} updated` };
   } catch (e) {
     return toActionError(e);
+  }
+}
+
+/** Type-to-search for the admin person pickers. */
+export async function searchPeopleAction(q: string): Promise<{ id: string; name: string; email: string; department: string | null }[]> {
+  try {
+    return await searchPeople(await requireApiUser(), q);
+  } catch {
+    return [];
   }
 }

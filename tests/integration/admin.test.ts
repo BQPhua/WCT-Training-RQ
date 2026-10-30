@@ -3,7 +3,7 @@ import { eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import { adminAuditLogs, businessUnits, departments, roleAssignments, users } from "@/db/schema";
 import { seed } from "@/db/seed";
-import { adminOverview, assignRole, flowOverview, updateBusinessUnitFlow, listUsers, revokeRole, setBusinessUnitAdmins, updateUser, upsertBusinessUnit, upsertDepartment, userOptions } from "@/lib/services/admin";
+import { adminOverview, assignRole, flowOverview, updateBusinessUnitFlow, listUsers, revokeRole, setBusinessUnitAdmins, updateUser, upsertBusinessUnit, upsertDepartment, searchPeople } from "@/lib/services/admin";
 import { asUser } from "./helpers";
 import { resetDb } from "./setup";
 
@@ -127,8 +127,9 @@ describe("admin services", () => {
     expect(people.every((p) => p.email.endsWith("@demo.wct.my"))).toBe(true);
     const o = await adminOverview(demoLnd);
     expect(o.roles.every((r) => r.email.endsWith("@demo.wct.my"))).toBe(true);
-    expect((await userOptions(demoLnd)).every((p) => p.email.endsWith("@demo.wct.my"))).toBe(true);
-    expect((await userOptions(await admin2())).some((p) => p.email === "it.admin@wct.my")).toBe(true);
+    expect((await searchPeople(demoLnd, "a")).every((p) => p.email.endsWith("@demo.wct.my"))).toBe(true);
+    expect((await searchPeople(demoLnd, "admin")).every((p) => p.email.endsWith("@demo.wct.my"))).toBe(true);
+    expect((await searchPeople(await admin2(), "it.admin")).some((p) => p.email === "it.admin@wct.my")).toBe(true);
   });
 
   it("creates a department with HOD and audits it", async () => {
@@ -160,5 +161,26 @@ describe("admin services", () => {
   it("refuses to deactivate yourself", async () => {
     const a = await admin();
     await expect(updateUser(a, a.id, { isActive: false })).rejects.toThrow(/yourself/i);
+  });
+});
+
+describe("searchPeople", () => {
+  it("finds active people by name or email, at most 10, after 2 characters", async () => {
+    const { searchPeople } = await import("@/lib/services/admin");
+    const lnd = await realLnd();
+    await db.insert(users).values(Array.from({ length: 12 }, (_, i) => ({ email: `hakim${i}@wct.my`, name: `Hakim ${i}` })));
+    await db.insert(users).values({ email: "gone@wct.my", name: "Hakim Gone", isActive: false });
+    expect(await searchPeople(lnd, "h")).toEqual([]);
+    const found = await searchPeople(lnd, "hakim");
+    expect(found).toHaveLength(10);
+    expect(found.some((p) => p.email === "gone@wct.my")).toBe(false);
+    expect((await searchPeople(lnd, "HAKIM3@WCT"))[0]).toMatchObject({ email: "hakim3@wct.my", name: "Hakim 3" });
+  });
+
+  it("demo viewers only find demo people", async () => {
+    const { searchPeople } = await import("@/lib/services/admin");
+    await db.insert(users).values({ email: "hafiz.real@wct.my", name: "Hafiz Real" });
+    const found = await searchPeople(await asUser("lnd1@demo.wct.my"), "hafiz");
+    expect(found.map((p) => p.email)).toEqual(["buadmin.enc@demo.wct.my"]);
   });
 });

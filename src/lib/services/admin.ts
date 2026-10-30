@@ -318,13 +318,19 @@ export async function syncDirectoryNow(user: CurrentUser) {
   return runDirectorySync({ trigger: "manual", triggeredBy: user.id });
 }
 
-export async function userOptions(user: CurrentUser) {
+/** People search for admin pickers: active, in the viewer's scope, by name or email; at most 10. */
+export async function searchPeople(user: CurrentUser, q: string) {
   requireAdminRead(user);
+  const term = q.trim();
+  if (term.length < 2) return [];
+  const like = `%${term.replace(/[%_\\]/g, "\\$&")}%`;
   return db
-    .select({ id: users.id, name: users.name, email: users.email })
+    .select({ id: users.id, name: users.name, email: users.email, department: departments.name })
     .from(users)
-    .where(and(eq(users.isActive, true), peopleScope(user)))
-    .orderBy(asc(users.name));
+    .leftJoin(departments, eq(users.departmentId, departments.id))
+    .where(and(eq(users.isActive, true), peopleScope(user), or(ilike(users.name, like), ilike(users.email, like))))
+    .orderBy(asc(users.name))
+    .limit(10);
 }
 
 /** Demo viewers only see notifications about demo requests. */
