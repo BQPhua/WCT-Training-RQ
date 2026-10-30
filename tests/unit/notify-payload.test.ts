@@ -55,6 +55,11 @@ describe("buildPayload", () => {
     expect(html).toContain("This training request has received final approval from the HR Head (Farah Hanim).");
   });
 
+  it("HOD approval with the BU Admin step off hands over to L&D", () => {
+    const html = buildPayload({ ...base, businessUnit: "Land", event: { kind: "HOD_APPROVED", fromStatus: "PENDING_HOD", toStatus: "PENDING_LND", actorId: "u-hod" }, actor: { id: "u-hod", name: "Tan Wei Ming", email: "tan@wct.my" } }).messageHtml;
+    expect(html).toContain("The Department HOD (Tan Wei Ming) has approved this training request. It is now with the L&amp;D Team for review.");
+  });
+
   it("BU approval headline hands over to L&D", () => {
     const p = buildPayload({ ...base, businessUnit: "Land", event: { kind: "BU_APPROVED", fromStatus: "PENDING_BU", actorId: "u-bua" }, actor: { id: "u-bua", name: "Lee Mei Ling", email: "lee@wct.my" } });
     expect(p.messageHtml).toContain("The Land BU Admin (Lee Mei Ling) has approved this training request. It is now with the L&amp;D Team for review.");

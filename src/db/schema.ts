@@ -56,6 +56,10 @@ export const businessUnits = pgTable("business_units", {
   isActive: boolean("is_active").notNull().default(true),
   /** E&C needs HR Head's final approval; Land and Malls are finalised by L&D. */
   requiresHrApproval: boolean("requires_hr_approval").notNull().default(true),
+  /** Off: HOD approval goes straight to L&D (BU Admins are still kept informed). */
+  requiresBuAdmin: boolean("requires_bu_admin").notNull().default(true),
+  /** Optional short descriptions shown under each step on the Approval flow tab (≤ 40 chars). */
+  stepNotes: jsonb("step_notes").$type<Partial<Record<"REQUESTER" | "HOD" | "BU" | "LND" | "HR", string>>>().notNull().default({}),
   createdAt: createdAt(),
 });
 

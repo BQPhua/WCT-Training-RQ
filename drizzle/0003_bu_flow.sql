@@ -1,0 +1,2 @@
+ALTER TABLE "business_units" ADD COLUMN "requires_bu_admin" boolean DEFAULT true NOT NULL;--> statement-breakpoint
+ALTER TABLE "business_units" ADD COLUMN "step_notes" jsonb DEFAULT '{}'::jsonb NOT NULL;

@@ -144,6 +144,19 @@ describe("L&D stage", () => {
   });
 });
 
+describe("BU Admin step switched off", () => {
+  it("HOD approval goes straight to PENDING_LND, still HOD_APPROVED", () => {
+    const r = transition(req("PENDING_HOD", { requiresBuAdmin: false }), hodLand, { type: "APPROVE" }, counts);
+    expect(r.toStatus).toBe("PENDING_LND");
+    expect(r.event.kind).toBe("HOD_APPROVED");
+    expect(r.event.toStatus).toBe("PENDING_LND");
+  });
+  it("an in-flight PENDING_BU request can still be approved by the BU Admin", () => {
+    const r = transition(req("PENDING_BU", { requiresBuAdmin: false }), buAdminLand, { type: "APPROVE" }, counts);
+    expect(r.toStatus).toBe("PENDING_LND");
+  });
+});
+
 describe("HR Head stage", () => {
   it("approve is final", () => {
     const r = transition(req("PENDING_HR"), hr, { type: "APPROVE" }, counts);
